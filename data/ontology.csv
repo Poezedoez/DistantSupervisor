@@ -1,0 +1,252 @@
+OntologyID,Class,Instance
+EN_1000002,dataset,Stanford Question Answering Dataset
+EN_1000002,dataset,SQUAD
+EN_1000003,dataset,ImageNet
+EN_1000004,dataset,Stanford Natural Language Inference corpus
+EN_1000004,dataset,SNLI
+EN_1000005,dataset,MultiNLI
+EN_1000006,dataset,Simple Wiki
+EN_1000007,dataset,IMDB Reviews
+EN_1000007,dataset,IMDB Dataset
+EN_1000008,dataset,Wordnet
+EN_1000009,dataset,NewsQA
+EN_1000010,dataset,MS Marco
+EN_1000011,dataset,TweetQA
+EN_1000012,dataset,WikiQA
+EN_1000013,dataset,bAbi
+EN_1000014,dataset,CIFAR-10
+EN_1000015,dataset,MS Coco
+EN_1000016,dataset,MSLR-WEB30K
+EN_1000017,dataset,Yahoo C14B
+EN_1000018,dataset,LETOR4.0
+EN_1000019,dataset,DBLP-Citation-network
+,dataset,GLUE
+,dataset,TREC
+EN_1000038,metric,Euclidean
+EN_1000039,metric,Manhattan
+EN_1000040,metric,Minkowski
+EN_1000041,metric,Levenshtein
+EN_1000043,metric,Bilingual evaluation understudy
+EN_1000043,metric,BLEU
+EN_1000044,metric,Recall-Oriented Understudy for Gisting Evaluation
+EN_1000044,metric,ROUGE
+EN_1000045,metric,F1
+EN_1000047,metric,Kappa statistics
+EN_1000050,metric,Mean Average Precision
+EN_1000056,hardware,Intel
+EN_1000058,hardware,NVIDIA_TESLA_K80
+EN_1000059,hardware,NVIDIA_TESLA_P4
+EN_1000060,hardware,NVIDIA_TESLA_P100
+EN_1000061,hardware,NVIDIA_TESLA_T4
+EN_1000062,hardware,NVIDIA_TESLA_V100
+EN_1000063,hardware,GeForce GTX TITAN X
+EN_1000064,hardware,GeForce GT 1030
+EN_1000065,hardware,GeForce GTX 1050
+EN_1000066,hardware,GeForce GTX 1050 Ti
+EN_1000067,hardware,GeForce GTX 1060
+EN_1000068,hardware,GeForce GTX 1070
+EN_1000069,hardware,GeForce GTX 1070 Ti
+EN_1000070,hardware,GeForce GTX 1080
+EN_1000071,hardware,GeForce GTX 1080 Ti
+EN_1000073,hardware,TPU v2
+EN_1000074,hardware,TPU v3
+EN_1000055,hardware,CPU
+EN_1000056,hardware,GPU 
+EN_1000072,hardware,TPU
+,learning_paradigm,Supervised learning
+,learning_paradigm,Unsupervised learning
+,learning_paradigm,Semi-supervised learning
+,learning_paradigm,Reinforcement learning
+,learning_paradigm,Self learning
+,learning_paradigm,Transfer learning
+,learning_paradigm,Curriculum learning
+,software_framework,Tensorflow
+,software_framework,PyTorch
+,software_framework,Theano
+,software_framework,Apache MXNet
+,software_framework,CAFFE
+,software_framework,Torch
+,software_framework,Keras
+,software_framework,DyNet
+,software_framework,MxNet
+,software_framework,Chainer
+,architectural_element,Convolutional layer
+,architectural_element,Pooling layer
+,architectural_element,ReLU layer
+,architectural_element,Fully connected layer
+,architectural_element,Softmax layer
+,architectural_element,Hidden layer
+,architectural_element,Attention layer
+,architectural_element,Softmax
+,architectural_element,ReLu
+,architectural_element,Sigmoid
+,machine_learning_algorithm,Ordinary Least Squares Regression
+,machine_learning_algorithm,OLSR
+,machine_learning_algorithm,Linear Regression
+,machine_learning_algorithm,Logistic Regression
+,machine_learning_algorithm,Stepwise Regression
+,machine_learning_algorithm,Multivariate Adaptive Regression Spline
+,machine_learning_algorithm,MARS
+,machine_learning_algorithm,Locally Estimated Scatterplot Smoothing
+,machine_learning_algorithm,Max-pooling
+,machine_learning_algorithm,k-Nearest Neighbor
+,machine_learning_algorithm,Nearest Neighbor
+,machine_learning_algorithm,kNN
+,machine_learning_algorithm,k-NN
+,machine_learning_algorithm,Learning Vector Quantization
+,machine_learning_algorithm,Self-Organizing Map
+,machine_learning_algorithm,SOM
+,machine_learning_algorithm,Locally Weighted Learning
+,machine_learning_algorithm,Support Vector Machine
+,machine_learning_algorithm,SVM
+,machine_learning_algorithm,Classification and Regression Tree
+,machine_learning_algorithm,CART
+,machine_learning_algorithm,Iterative Dichotomiser 3
+,machine_learning_algorithm,ID3
+,machine_learning_algorithm,C4.5
+,machine_learning_algorithm,C5.0
+,machine_learning_algorithm,Chi-squared Automatic Interaction Detection
+,machine_learning_algorithm,CHAID
+,machine_learning_algorithm,Decision Stump
+,machine_learning_algorithm,M5
+,machine_learning_algorithm,Conditional Decision Tree
+,machine_learning_algorithm,Naive Bayes
+,machine_learning_algorithm,Gaussian Naive Bayes
+,machine_learning_algorithm,Multinomial Naive Bayes
+,machine_learning_algorithm,Averaged One-Dependence Estimator
+,machine_learning_algorithm,Bayesian Belief Network
+,machine_learning_algorithm,Bayesian Network
+,machine_learning_algorithm,k-Means
+,machine_learning_algorithm,k-Medians
+,machine_learning_algorithm,Expectation Maximisation
+,machine_learning_algorithm,Hierarchical Clustering
+,machine_learning_algorithm,Perceptron
+,machine_learning_algorithm,Multilayer Perceptron
+,machine_learning_algorithm,MLP
+,machine_learning_algorithm,Back-Propagation
+,machine_learning_algorithm,Hopfield Network
+,machine_learning_algorithm,Radial Basis Function Network
+,machine_learning_algorithm,Convolutional neural network
+,machine_learning_algorithm,CNN
+,machine_learning_algorithm,convnet
+,machine_learning_algorithm,Recurrent neural network
+,machine_learning_algorithm,RNN
+,machine_learning_algorithm,Long short-term memory
+,machine_learning_algorithm,LSTM
+,machine_learning_algorithm,Gated recurrent unit
+,machine_learning_algorithm,GRU
+,machine_learning_algorithm,Generative adversarial network
+,machine_learning_algorithm,GAN
+,machine_learning_algorithm,Resnet
+,machine_learning_algorithm,Variational autoencoder
+,machine_learning_algorithm,VAE
+,machine_learning_algorithm,Gamma-ray burst coordinates network
+,machine_learning_algorithm,Auto-Encoder
+,machine_learning_algorithm,Transformer
+,machine_learning_algorithm,BERT
+,machine_learning_algorithm,XLNet
+,machine_learning_algorithm,AlexNet
+,machine_learning_algorithm,Inception
+,machine_learning_algorithm,ALBERT
+,machine_learning_algorithm,Roberta
+,machine_learning_algorithm,SciBERT
+,machine_learning_algorithm,Principal Component Analysis
+,machine_learning_algorithm,PCA
+,machine_learning_algorithm,Principal Component Regression
+,machine_learning_algorithm,Partial Least Squares Regression
+,machine_learning_algorithm,Sammon Mapping
+,machine_learning_algorithm,Multidimensional Scaling
+,machine_learning_algorithm,Projection Pursuit
+,machine_learning_algorithm,Linear Discriminant Analysis
+,machine_learning_algorithm,LDA
+,machine_learning_algorithm,Mixture Discriminant Analysis
+,machine_learning_algorithm,Quadratic Discriminant Analysis
+,machine_learning_algorithm,Flexible Discriminant Analysis
+,machine_learning_algorithm,Bootstrapped Aggregation
+,machine_learning_algorithm,Bagging
+,machine_learning_algorithm,Adaboost
+,machine_learning_algorithm,Weighted Average
+,machine_learning_algorithm,Blending
+,machine_learning_algorithm,Stacked Generalization
+,machine_learning_algorithm,Stacking
+,machine_learning_algorithm,Gradient Boosting Machine
+,machine_learning_algorithm,Random Forest
+,application_area,NER
+,application_area,Named-entity recognition
+,application_area,Computational Lexicology
+,application_area,Computational Morphology
+,application_area,Computational Phonology
+,application_area,Computational Semantics
+,application_area,Computational Syntax
+,application_area,Dialectometrics
+,application_area,Dialogue Systems
+,application_area,Distributional Hypothesis
+,application_area,Information Extraction
+,application_area,Lexical Acquisition
+,application_area,Machine Translation
+,application_area,Natural Language Generation
+,application_area,Natural Language Understanding 
+,application_area,Natural Language Processing
+,application_area,NLP
+,application_area,NLU
+,application_area,Multiword Expressions
+,application_area,Parsing
+,application_area,Part-of-speech tagging
+,application_area,POS tagging
+,application_area,Question Answering
+,application_area,QA
+,application_area,Semantics
+,application_area,Speech Processing
+,application_area,Statistical Semantics
+,application_area,Text Categorization
+,application_area,Textual Entailment and Natural Language Inference
+,application_area,Text Summarization
+,application_area,Word Sense Disambiguation
+,application_area,WSD
+,application_area,Image Classification
+,application_area,Object Localization
+,application_area,Object Detection
+,application_area,Segmentation
+,application_area,Image Style Transfer
+,application_area,Image Colorization
+,application_area,Image Reconstruction
+,application_area,Image Super-Resolution
+,application_area,Image Synthesis
+,application_area,Query parsing
+,application_area,Query processing
+,application_area,Query expansion
+,application_area,Query intent classification
+,application_area,Robot
+,application_area,Robotic Actuation
+,application_area,Robotic sensing
+,application_area,Robotic manipulation
+,application_area,Robotic locomotion
+,application_area,Robotic navigation
+,application_area,Human-robot interaction
+,application_area,Speaker identification
+,application_area,Voice user interfaces
+,application_area,Speech-to-text processing
+,technique,Stochastic Gradient Descent
+,technique,SGD
+,technique,RMSProp
+,technique,Adam
+,technique,Adadelta
+,technique,Adagrad
+,technique,AdamW
+,technique,AdaMax
+,technique,Kalman-based Stochastic Gradient Descent
+,technique,Second-Order Methods
+,technique,Learning rate decay
+,technique,Drop out
+,technique,Cross validation
+,technique,Leave one out
+,technique,Batch Normalization
+,technique,Masking
+,technique,Regularization
+,technique,Adversarial attacks
+,technique,Adversarial training
+,technique,Data augmentation
+,technique,Cross entropy loss
+,technique,L2-loss
+,technique,Logarithmic loss
+,technique,Area Under its Curve
