@@ -69,10 +69,14 @@ class DistantlySupervisedDataset():
 
         ## Save statistics
         with open(self.output_path+'statistics.json', 'w', encoding='utf-8') as json_file:
-                json.dump(self.statistics, json_file) 
+            json.dump(self.statistics, json_file) 
 
         ## Save ontology used
         shutil.copyfile(args.ontology_path, self.output_path+'ontology.csv')
+
+        ## Save calculated entity embeddings
+        with open(self.output_path+'entity_embeddings.json', 'w', encoding='utf-8') as json_file:
+            json.dump(self.entity_embeddings, json_file)
 
         ## Save list of documents used for the set
         with open(self.output_path+'filelist.txt', 'w', encoding='utf-8') as txt_file:
