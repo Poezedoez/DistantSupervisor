@@ -33,9 +33,17 @@ class DistantlySupervisedDataset():
         dataset (list): list of annotated sentence datapoints
         
     '''
-    def __init__(self, ontology_path="data/ontology.csv", document_path="data/ScientificDocuments/", 
-        entity_embedding_path="data/entity_embeddings.json", output_path="data/DistantlySupervisedDatasets/"):
-        self.ontology = self._read_ontology(ontology_path)
+    def __init__(
+            self, 
+            ontology_entities_path="data/ontology_entities.csv", 
+            ontology_relations_path="data/ontology_relations.csv",
+            document_path="data/ScientificDocuments/", 
+            entity_embedding_path="data/entity_embeddings.json", 
+            output_path="data/DistantlySupervisedDatasets/"
+        ):
+
+        self.ontology_entities = self._read_ontology_entities(ontology_entities_path)
+        self.ontology_relations = self._read_ontology_relations(ontology_relations_path)
         self.embedder = BertEmbedder('data/scibert_scivocab_cased')
         self.timestamp = time.strftime("%Y%m%d-%H%M%S")
         self.document_path = document_path
@@ -111,16 +119,27 @@ class DistantlySupervisedDataset():
                 yield sentence, document_embeddings, offset
                 offset += len(sentence)
 
-    def _read_ontology(self, path):
-        ontology = defaultdict(list)
+    def _read_ontology_entities(self, path):
+        ontology_entities = defaultdict(list)
         with open(path, 'r', encoding='utf-8') as csv_file:
             csv_reader = csv.reader(csv_file)
             next(csv_reader, None) # skip headers
             for _, class_, instance in csv_reader:
-                ontology[class_].append(instance)
+                ontology_entities[class_].append(instance)
         
-        return ontology
+        return ontology_entities
 
+    def _read_ontology_relations(self, path):
+        ontology_relations = {}
+        with open(path, 'r', encoding='utf-8') as csv_file:
+            csv_reader = csv.reader(csv_file)
+            next(csv_reader, None) # skip headers
+            for _, head, _, _ in csv_reader:
+                ontology_relations[head] = {}
+            for _, head, relation, tail in csv_reader:
+                ontology_relations[head][tail] = relation
+        
+        return ontology_relations
 
     def _read_documents(self, selection=None):
         path = self.document_path
@@ -163,7 +182,7 @@ class DistantlySupervisedDataset():
         matches = []
         prev_entity = False
         start = 0
-        similarities = cosine_similarity(sentence_embeddings, self.class_arrays[class_])
+        similarities = cosine_similarity(sentence_embeddings, np.array(self.class_arrays[class_]))
         max_similarities = similarities.max(axis=1)
         for i, token in enumerate(tok2fused):
             score = max_similarities[i]
@@ -189,33 +208,48 @@ class DistantlySupervisedDataset():
 
         
     def _label_sentence(self, sentence_subtokens, document_embeddings, offset, knn_labeling=False):
+        def _label_relations():
+            relations = []
+            if len(entities) > 1:
+                pairs = [(a, b) for a in range(0, len(entities)) for b in range(0, len(entities))]
+                for head, tail in pairs:
+                    relation = self.ontology_relations.get([entities[head]["type"]][entities[tail]["type"]], None)
+                    if relation:
+                        relations.append({"type":relation, "head":head, "tail":tail})
+            return relations
+        
+        def _label_entities():
+            entities = []
+            for class_, string_instances in self.ontology.items():
+                for string_instance in string_instances:
+                    string_matches = self._string_match(fused_tokens, string_instance)
+                    knn_matches = self._knn_match(sentence_embeddings, tok2fused, class_) if knn_labeling and string_matches else []
+                    matches = set(string_matches+knn_matches)
+                    # TODO: temp!!
+                    matches = knn_matches
+                    for start, end in matches:
+                        entity_string = " ".join(fused_tokens[start:end]).lower()
+                        print("knn_matched the instance |{}| to class |{}|".format(entity_string, class_))
+                        print("original sentence:", " ".join(fused_tokens))
+                        self.statistics["classes"][class_] += 1
+                        self.statistics["tokens"][class_][entity_string] += 1
+                        
+                        entities.append({"type":class_, "start":start, "end":end})
+            return entities
+
         fused_tokens, tok2fused, _ = self._fuse_subtokens(sentence_subtokens)
         sentence_embeddings = document_embeddings[offset:offset+len(sentence_subtokens)]
         training_instance = {}
-        entities = []
-        for class_, string_instances in self.ontology.items():
-            for string_instance in string_instances:
-                string_matches = self._string_match(fused_tokens, string_instance)
-                knn_matches = self._knn_match(sentence_embeddings, tok2fused, class_) if knn_labeling and string_matches else []
-                matches = set(string_matches+knn_matches)
-                # TODO: temp!!
-                matches = knn_matches
-                for start, end in matches:
-                    entity_string = " ".join(fused_tokens[start:end]).lower()
-                    print("knn_matched the instance |{}| to class |{}|".format(entity_string, class_))
-                    print("original sentence:", " ".join(fused_tokens))
-                    self.statistics["classes"][class_] += 1
-                    self.statistics["tokens"][class_][entity_string] += 1
-                    
-                    entities.append({"type":class_, "start":start, "end":end})
+
 
         if entities:
+            relations = _label_relations()
             self.statistics["sentences_useful"] += 1
             self.statistics["tokens_total"] += len(fused_tokens)
             self.statistics["entities_total"] += len(entities)
             joint_string = "".join(fused_tokens)
             hash_string = hash(joint_string)
-            training_instance = {"tokens":fused_tokens, "entities":entities, "relations":[], "orig_id":hash_string}
+            training_instance = {"tokens":fused_tokens, "entities":entities, "relations":relations, "orig_id":hash_string}
             self.dataset.append(training_instance)
 
         self.statistics["sentences_processed"] += 1
@@ -224,7 +258,7 @@ class DistantlySupervisedDataset():
 
         if os.path.isfile(self.entity_embedding_path):
             with open(self.entity_embedding_path) as json_file:
-                self.entity_embeddings = json.load(json_file) 
+                self.class_arrays = json.load(json_file) 
                 return
 
         ## Sum all entity instances
@@ -250,12 +284,15 @@ class DistantlySupervisedDataset():
                 entity_embeddings[class_][token]= summed_embedding/count
                 embeddings = [entity_embeddings[class_][instance] for instance in entity_embeddings[class_]]
                 embeddings = [np.zeros(768)] if not embeddings else embeddings
-            class_tensor = np.stack(embeddings)
-            self.class_arrays[class_] = class_tensor
+            class_array = np.stack(embeddings)
+            self.class_arrays[class_] = class_array.tolist()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Create a distantly supervised dataset of scientific documents')
-    parser.add_argument('--ontology_path', type=str, default="data/ontology.csv", help="path to the ontology file")
+    parser.add_argument('--ontology_entities_path', type=str, default="data/ontology_entities.csv", 
+        help="path to the ontology entities file")
+    parser.add_argument('--ontology_relations_path', type=str, default="data/ontology_relations.csv", 
+        help="path to the ontology relations file")
     parser.add_argument('--document_path', type=str, help='path to the folder containing scientific documents',
         default="data/ScientificDocuments/all/")
     parser.add_argument('--output_path', type=str, default="data/DistantlySupervisedDatasets/", help="output path")
