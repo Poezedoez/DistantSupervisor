@@ -11,6 +11,7 @@ import argparse
 import csv
 import shutil
 from sklearn.metrics.pairwise import cosine_similarity
+from pretty_print import pretty_write
 
 
 def _read_ontology_entities(path):
@@ -115,7 +116,8 @@ class DistantlySupervisedDataset:
         Path(directory).mkdir(parents=True, exist_ok=True)
 
         # Save dataset
-        with open(self.output_path + 'dataset.json', 'w', encoding='utf-8') as json_file:
+        dataset_path = self.output_path + 'dataset.json'
+        with open(dataset_path, 'w', encoding='utf-8') as json_file:
             json.dump(self.dataset, json_file)
 
         # Save statistics
@@ -130,6 +132,9 @@ class DistantlySupervisedDataset:
         with open(self.output_path + 'filelist.txt', 'w', encoding='utf-8') as txt_file:
             for file in self.flist:
                 txt_file.write("{} \n".format(file))
+
+        ## Save pretty output of dataset
+        pretty_write(dataset_path, self.output_path+'pretty_output.txt')
 
     def print_statistics(self, statistics=None):
         if statistics:
@@ -317,6 +322,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
     dataset = DistantlySupervisedDataset(args.ontology_entities_path, args.ontology_relations_path, args.document_path,
                                          args.entity_embedding_path, args.output_path)
-    # dataset.create(knn_labeling=args.knn_labeling, selection=tuple(args.selection))
-    dataset._load_class_arrays()
-    dataset._save()
+    dataset.create(knn_labeling=args.knn_labeling, selection=tuple(args.selection))
