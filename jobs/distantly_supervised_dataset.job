@@ -19,8 +19,8 @@ cp -r $HOME/distantly-supervised-dataset/ $TMPDIR
 cd $TMPDIR/distantly-supervised-dataset
 
 RUN_NAME="`date +%d_%m_%Y_%H_%M_%S`";
-python DistantlySupervisedDataset.py --document_path "data/ScientificDocuments/" --selection 200 300 --output_path "data/DistantlySupervisedDatasets/test/" >> outputs_test_${RUN_NAME}.txt
-python DistantlySupervisedDataset.py --document_path "data/ScientificDocuments/" --selection 0 200 --output_path "data/DistantlySupervisedDatasets/train/" >> outputs_train_${RUN_NAME}.txt
+python DistantlySupervisedDataset.py --document_path "data/ScientificDocuments/" --selection 200 300 --output_path "data/DistantlySupervisedDatasets/test/"
+python DistantlySupervisedDataset.py --document_path "data/ScientificDocuments/" --selection 0 200 --output_path "data/DistantlySupervisedDatasets/train/"
 
 cp -r data/DistantlySupervisedDatasets/ $HOME/distantly-supervised-dataset/data/
 cp outputs_test_${RUN_NAME}.txt $HOME/distantly-supervised-dataset/data/DistantlySupervisedDatasets/
