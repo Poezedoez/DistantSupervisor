@@ -18,7 +18,7 @@ source activate lisaenv
 cp -r $HOME/distantly-supervised-dataset/ $TMPDIR
 cd $TMPDIR/distantly-supervised-dataset
 
-RUN_NAME="`date +%d_%m_%Y_%H_%M_%S`";
-python DistantlySupervisedDataset.py --document_path "data/ScientificDocuments/" --selection 0 200 --knn_labeling 1 --output_path "data/DistantlySupervisedDatasets/" >> outputs_train_${RUN_NAME}.txt
+#RUN_NAME="`date +%d_%m_%Y_%H_%M_%S`";
+python DistantlySupervisedDataset.py --selection 0 200 --knn_labeling 1 --output_path "data/DistantlySupervisedDatasets/"
 
 cp data/entity_embeddings.json $HOME/distantly-supervised-dataset/data

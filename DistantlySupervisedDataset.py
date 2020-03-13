@@ -71,7 +71,7 @@ class DistantlySupervisedDataset:
         entity_embedding_path (str): stored entity embedding path from init argument
         output_path (str): stored output path from init argument
         statistics (dict): dict to store statistics from creation process
-        class_arrays (dict): dict of instance embeddings stacked for one class
+        type_arrays (dict): dict of instance embeddings stacked for one class
         flist (list): list of files used
         dataset (list): list of annotated sentence datapoints
         
@@ -94,16 +94,16 @@ class DistantlySupervisedDataset:
         self.entity_embedding_path = entity_embedding_path
         self.output_path = output_path + '{}/'.format(self.timestamp)
         self.statistics = {"relations": Counter(), "relations_total": 0,
-                           "entities": {class_: Counter() for class_ in self.ontology_entities},
+                           "entities": {type_: Counter() for type_ in self.ontology_entities},
                            "entity_sentences": 0, "sentences_processed": 0, "entities_total": 0, "tokens_total": 0,
                            "relation_candidates": 0}
-        self.class_arrays = {}
+        self.type_arrays = {}
         self.flist = []
         self.dataset = []
 
     def create(self, verbose=True, label_function=0, selection=None):
         if label_function > 0:
-            self._load_class_arrays()
+            self._load_type_arrays()
         start_time = time.time()
         for sentence_subtokens, document_embeddings, offset in self._iter_sentences(selection):
             self._label_sentence(sentence_subtokens, document_embeddings, offset, label_function)
@@ -156,12 +156,12 @@ class DistantlySupervisedDataset:
         ) else 0
         print("Every {} tokens an entity occurs".format(tokens_per_entity))
         print("Entities were found in the following classes:")
-        for class_, instance_counter in stats["entities"].items():
+        for type_, instance_counter in stats["entities"].items():
             count = sum([count for _, count in instance_counter.items()])
-            print(class_, count)
+            print(type_, count)
         print("The most frequently labeled entities per class are:")
-        for class_, instance_counter in stats["entities"].items():
-            print("{} \t".format(class_), Counter(instance_counter).most_common(5))
+        for type_, instance_counter in stats["entities"].items():
+            print("{} \t".format(type_), Counter(instance_counter).most_common(5))
         print("--- Relations ---")
         relations_per_sentence = stats["relation_candidates"]/stats["relations_total"] if(
             stats["relations_total"] != 0
@@ -200,11 +200,11 @@ class DistantlySupervisedDataset:
 
         return matches
 
-    def _knn_match(self, sentence_embeddings, tok2glued, class_, threshold=0.9):
+    def _knn_match(self, sentence_embeddings, tok2glued, type_, threshold=0.9):
         matches = []
         prev_entity = False
         start = 0
-        similarities = cosine_similarity(sentence_embeddings, self.class_arrays[class_])
+        similarities = cosine_similarity(sentence_embeddings, self.type_arrays[type_])
         max_similarities = similarities.max(axis=1)
         for token in tok2glued:
             score = max_similarities[token]
@@ -244,22 +244,23 @@ class DistantlySupervisedDataset:
 
         def _label_entities(tokens, tok2glued):
             entities = []
-            sentence_embeddings = document_embeddings[offset+1: offset+len(tokens)+1]  # skip [CLS] and [SEP]
-            for class_, string_instances in self.ontology_entities.items():
+            sentence_embeddings = document_embeddings[offset+1: offset+1+len(tokens)]  # skip [CLS] and [SEP]
+            for type_, string_instances in self.ontology_entities.items():
                 for string_instance in string_instances:
                     if label_function == 0 or label_function == 2:
                         string_matches = self._string_match(glued_tokens, string_instance)
                     else:
                         string_matches = []
                     if label_function == 1 or label_function == 2:
-                        knn_matches = self._knn_match(sentence_embeddings, tok2glued, class_)
+                        knn_matches = self._knn_match(sentence_embeddings, tok2glued, type_)
                     else:
                         knn_matches = []
                     matches = set(string_matches + knn_matches)
                     for start, end in matches:
                         entity_string = " ".join(glued_tokens[start:end]).lower()
-                        self.statistics["entities"][class_][entity_string] += 1
-                        entities.append({"type": class_, "start": start, "end": end})
+                        print("Found |{}| as |{}|".format(entity_string, type_))
+                        self.statistics["entities"][type_][entity_string] += 1
+                        entities.append({"type": type_, "start": start, "end": end})
             return entities
 
         glued_tokens, tok2glued, _ = _glue_subtokens(sentence_subtokens)
@@ -279,29 +280,29 @@ class DistantlySupervisedDataset:
                              "relations": relations, "orig_id": hash_string}
         self.dataset.append(training_instance)
 
-    def _load_class_arrays(self):
+    def _load_type_arrays(self):
         def _calculate_entity_embeddings():
             # Sum all entity instances
-            entity_embeddings = {class_: defaultdict(lambda: np.zeros(768)) for class_ in self.ontology_entities}
-            entity_counter = {class_: Counter() for class_ in self.ontology_entities.keys()}
+            entity_embeddings = {type_: defaultdict(lambda: np.zeros(768)) for type_ in self.ontology_entities}
+            entity_counter = {type_: Counter() for type_ in self.ontology_entities.keys()}
             for sentence_subtokens, document_embeddings, offset in self._iter_sentences(selection=args.selection):
                 glued_tokens, _, _ = _glue_subtokens(sentence_subtokens)
-                sentence_embeddings = document_embeddings[offset:offset + len(sentence_subtokens)]
-                for class_, string_instances in self.ontology_entities.items():
+                sentence_embeddings = document_embeddings[offset+1: offset+1+len(glued_tokens)]
+                for type_, string_instances in self.ontology_entities.items():
                     for string_instance in string_instances:
                         string_matches = self._string_match(glued_tokens, string_instance)
                         for start, end in string_matches:
                             embedding = np.stack(sentence_embeddings[start:end]).mean(axis=0)
                             # embedding = sentence_embeddings[start]
                             token = string_instance.lower()
-                            entity_embeddings[class_][token] += embedding
-                            entity_counter[class_][token] += 1
+                            entity_embeddings[type_][token] += embedding
+                            entity_counter[type_][token] += 1
 
             # Average the sum of embeddings
-            for class_, count_dict in entity_counter.items():
+            for type_, count_dict in entity_counter.items():
                 for token, count in count_dict.items():
-                    summed_embedding = entity_embeddings[class_][token]
-                    entity_embeddings[class_][token] = (summed_embedding / count).tolist()
+                    summed_embedding = entity_embeddings[type_][token]
+                    entity_embeddings[type_][token] = (summed_embedding / count).tolist()
 
             return entity_embeddings
 
@@ -313,11 +314,11 @@ class DistantlySupervisedDataset:
             with open(self.entity_embedding_path, 'w', encoding='utf-8') as json_file:
                 json.dump(entity_embeddings, json_file)
 
-        for class_ in entity_embeddings:
-            embeddings = [entity_embeddings[class_][instance] for instance in entity_embeddings[class_]]
+        for type_ in entity_embeddings:
+            embeddings = [entity_embeddings[type_][instance] for instance in entity_embeddings[type_]]
             embeddings = [np.zeros(768)] if not embeddings else embeddings
-            class_array = np.stack(embeddings)
-            self.class_arrays[class_] = class_array
+            type_array = np.stack(embeddings)
+            self.type_arrays[type_] = type_array
 
 
 if __name__ == "__main__":
