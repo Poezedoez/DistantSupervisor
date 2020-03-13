@@ -99,12 +99,12 @@ class DistantlySupervisedDataset:
         self.flist = []
         self.dataset = []
 
-    def create(self, verbose=True, knn_labeling=False, selection=None):
-        if knn_labeling:
+    def create(self, verbose=True, labeling_function=0, selection=None):
+        if labeling_function > 0:
             self._load_class_arrays()
         start_time = time.time()
         for sentence_subtokens, document_embeddings, offset in self._iter_sentences(selection):
-            self._label_sentence(sentence_subtokens, document_embeddings, offset, knn_labeling)
+            self._label_sentence(sentence_subtokens, document_embeddings, offset, labeling_function)
         end_time = time.time()
         self.statistics["time_taken"] = int(end_time - start_time)
         self._save()
@@ -214,7 +214,7 @@ class DistantlySupervisedDataset:
 
         return matches
 
-    def _label_sentence(self, sentence_subtokens, document_embeddings, offset, knn_labeling=False):
+    def _label_sentence(self, sentence_subtokens, document_embeddings, offset, labeling_function=0):
         def _label_relations(entities):
             relations = []
             if len(entities) > 1:
@@ -230,12 +230,15 @@ class DistantlySupervisedDataset:
             sentence_embeddings = document_embeddings[offset:offset + len(tokens)]
             for class_, string_instances in self.ontology_entities.items():
                 for string_instance in string_instances:
-                    string_matches = self._string_match(fused_tokens, string_instance)
-                    knn_matches = self._knn_match(sentence_embeddings, tok2fused, class_) if (
-                            knn_labeling and string_matches) else []
+                    if labeling_function == 0 or labeling_function == 2:
+                        string_matches = self._string_match(fused_tokens, string_instance)
+                    else:
+                        string_matches = []
+                    if labeling_function == 1 or labeling_function == 2:
+                        knn_matches = self._knn_match(sentence_embeddings, tok2fused, class_)
+                    else:
+                        knn_matches = []
                     matches = set(string_matches + knn_matches)
-                    # TODO: temp!!
-                    matches = knn_matches
                     for start, end in matches:
                         entity_string = " ".join(fused_tokens[start:end]).lower()
                         print("knn_matched the instance |{}| to class |{}|".format(entity_string, class_))
@@ -317,9 +320,9 @@ if __name__ == "__main__":
                         help="path to file of precalculated lexical embeddings of the entities")
     parser.add_argument('--selection', type=int, nargs=2, default=None,
                         help="start and end of file range for train/test split")
-    parser.add_argument('--knn_labeling', type=int, default=0,
-                        help="use knn unsupervised labeling in conjunction with default string matching")
+    parser.add_argument('--label_function', type=int, default=0, choices=range(0, 3),
+                        help="0 = string, 1 = knn, 2 = string + knn")
     args = parser.parse_args()
     dataset = DistantlySupervisedDataset(args.ontology_entities_path, args.ontology_relations_path, args.document_path,
                                          args.entity_embedding_path, args.output_path)
-    dataset.create(knn_labeling=args.knn_labeling, selection=tuple(args.selection))
+    dataset.create(labeling_function=args.labeling_function, selection=tuple(args.selection))
