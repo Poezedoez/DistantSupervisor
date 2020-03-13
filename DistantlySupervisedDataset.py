@@ -93,18 +93,20 @@ class DistantlySupervisedDataset:
         self.document_path = document_path
         self.entity_embedding_path = entity_embedding_path
         self.output_path = output_path + '{}/'.format(self.timestamp)
-        self.statistics = {"classes": Counter(), "tokens": {class_: Counter() for class_ in self.ontology_entities},
-                           "sentences_useful": 0, "sentences_processed": 0, "entities_total": 0, "tokens_total": 0}
+        self.statistics = {"relations": Counter(), "relations_total": 0,
+                           "entities": {class_: Counter() for class_ in self.ontology_entities},
+                           "entity_sentences": 0, "sentences_processed": 0, "entities_total": 0, "tokens_total": 0,
+                           "relation_candidates": 0}
         self.class_arrays = {}
         self.flist = []
         self.dataset = []
 
-    def create(self, verbose=True, labeling_function=0, selection=None):
-        if labeling_function > 0:
+    def create(self, verbose=True, label_function=0, selection=None):
+        if label_function > 0:
             self._load_class_arrays()
         start_time = time.time()
         for sentence_subtokens, document_embeddings, offset in self._iter_sentences(selection):
-            self._label_sentence(sentence_subtokens, document_embeddings, offset, labeling_function)
+            self._label_sentence(sentence_subtokens, document_embeddings, offset, label_function)
         end_time = time.time()
         self.statistics["time_taken"] = int(end_time - start_time)
         self._save()
@@ -133,7 +135,7 @@ class DistantlySupervisedDataset:
             for file in self.flist:
                 txt_file.write("{} \n".format(file))
 
-        ## Save pretty output of dataset
+        # Save pretty output of dataset
         pretty_write(dataset_path, self.output_path+'pretty_output.txt')
 
     def print_statistics(self, statistics=None):
@@ -145,17 +147,29 @@ class DistantlySupervisedDataset:
 
         print("--- STATISTICS ---")
         print("Processed {} sentences of which {} contained at least one entity".format(
-            stats["sentences_processed"], stats["sentences_useful"]
+            stats["sentences_processed"], stats["entity_sentences"]
         ))
         print("Time taken: {} seconds".format(stats["time_taken"]))
-        tokens_per_entity = stats["tokens_total"] / stats["entities_total"]
+        print("--- Entities ---")
+        tokens_per_entity = stats["tokens_total"] / stats["entities_total"] if(
+            stats["entities_total"] != 0
+        ) else 0
         print("Every {} tokens an entity occurs".format(tokens_per_entity))
-        print("The following classes were found:")
-        for class_, count in stats["classes"].items():
+        print("Entities were found in the following classes:")
+        for class_, instance_counter in stats["entities"].items():
+            count = sum([count for _, count in instance_counter.items()])
             print(class_, count)
-        print("The most frequently labeled tokens per class are:")
-        for class_, instance_counter in stats["tokens"].items():
+        print("The most frequently labeled entities per class are:")
+        for class_, instance_counter in stats["entities"].items():
             print("{} \t".format(class_), Counter(instance_counter).most_common(5))
+        print("--- Relations ---")
+        relations_per_sentence = stats["relation_candidates"]/stats["relations_total"] if(
+            stats["relations_total"] != 0
+        ) else 0
+        print("Every {} sentences with at least two entities a relation occurs".format(relations_per_sentence))
+        print("Relations were found in the following classes:")
+        for relation, count in stats["relations"].items():
+            print(relation, count)
 
     def _iter_sentences(self, selection=None):
         for document_sentences, document_embeddings in self._read_documents(selection):
@@ -214,14 +228,17 @@ class DistantlySupervisedDataset:
 
         return matches
 
-    def _label_sentence(self, sentence_subtokens, document_embeddings, offset, labeling_function=0):
+    def _label_sentence(self, sentence_subtokens, document_embeddings, offset, label_function=0):
         def _label_relations(entities):
             relations = []
             if len(entities) > 1:
+                self.statistics["relation_candidates"] += 1
                 pairs = [(a, b) for a in range(0, len(entities)) for b in range(0, len(entities))]
                 for head, tail in pairs:
-                    relation = self.ontology_relations.get([entities[head]["type"]][entities[tail]["type"]], None)
+                    relation = self.ontology_relations.get(entities[head]["type"], {}).get(entities[tail]["type"])
                     if relation:
+                        self.statistics["relations_total"] += 1
+                        self.statistics["relations"][relation] += 1
                         relations.append({"type": relation, "head": head, "tail": tail})
             return relations
 
@@ -230,22 +247,18 @@ class DistantlySupervisedDataset:
             sentence_embeddings = document_embeddings[offset:offset + len(tokens)]
             for class_, string_instances in self.ontology_entities.items():
                 for string_instance in string_instances:
-                    if labeling_function == 0 or labeling_function == 2:
+                    if label_function == 0 or label_function == 2:
                         string_matches = self._string_match(fused_tokens, string_instance)
                     else:
                         string_matches = []
-                    if labeling_function == 1 or labeling_function == 2:
+                    if label_function == 1 or label_function == 2:
                         knn_matches = self._knn_match(sentence_embeddings, tok2fused, class_)
                     else:
                         knn_matches = []
                     matches = set(string_matches + knn_matches)
                     for start, end in matches:
                         entity_string = " ".join(fused_tokens[start:end]).lower()
-                        print("knn_matched the instance |{}| to class |{}|".format(entity_string, class_))
-                        print("original sentence:", " ".join(fused_tokens))
-                        self.statistics["classes"][class_] += 1
-                        self.statistics["tokens"][class_][entity_string] += 1
-
+                        self.statistics["entities"][class_][entity_string] += 1
                         entities.append({"type": class_, "start": start, "end": end})
             return entities
 
@@ -257,7 +270,7 @@ class DistantlySupervisedDataset:
         if not entities:
             return
 
-        self.statistics["sentences_useful"] += 1
+        self.statistics["entity_sentences"] += 1
         self.statistics["tokens_total"] += len(fused_tokens)
         self.statistics["entities_total"] += len(entities)
         joint_string = "".join(fused_tokens)
@@ -325,4 +338,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
     dataset = DistantlySupervisedDataset(args.ontology_entities_path, args.ontology_relations_path, args.document_path,
                                          args.entity_embedding_path, args.output_path)
-    dataset.create(labeling_function=args.labeling_function, selection=tuple(args.selection))
+    dataset.create(label_function=args.label_function, selection=tuple(args.selection))
