@@ -66,8 +66,27 @@ def is_file(path):
 def create_dir_structure(path_dict):
     for _, path in path_dict.items():
         directory = os.path.dirname(path)
-        Path(directory).mkdir(parents=True, exist_ok=True) 
+        Path(directory).mkdir(parents=True, exist_ok=True)
+
+def merge_list_dicts(d1, d2):
+    """
+    Merge two dicts with lists as default value,
+    and removing duplicate values
+    """
+    for key, l2 in d2.items():
+        l1 = d1.get(key, [])
+        d1[key] = set(l1+l2)
+
+    return d1
 
 def create_spans(sequence):
     #TODO
     pass
+
+if __name__ == '__main__':
+    d1 = {}
+    d2 = {}
+    d1['banana'] = [1, 4, (6, 9)]
+    d2['banana'] = [3, (6, 9), (4, 5)]
+    d2['monkey'] = [2, 6]
+    print(merge_list_dicts(d1, d2))
