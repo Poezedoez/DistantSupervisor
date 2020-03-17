@@ -306,6 +306,8 @@ class DistantlySupervisedDataset:
                         print("glued", len(glued_tokens))
                         print("pointers", glued2tok[start:end+1])
                         pointers = glued2tok[start:end+1]
+                        if len(pointers) == 1:  # last token in sentence
+                            pointers = pointers.append(pointers[-1]+1)
                         matched_embeddings = sentence_embeddings[pointers[0]:pointers[-1]]
                         print("sentsub", sentence_subtokens[pointers[0]:pointers[-1]])
                         matched_glued_tokens = glued_tokens[start:end]
