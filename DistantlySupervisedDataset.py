@@ -301,17 +301,11 @@ class DistantlySupervisedDataset:
                 for type_, positions in string_matches.items():
                     for position in positions:
                         start, end = position
-                        print("glued_position_matches", start, end)
-                        print("token pointers", glued2tok[start], glued2tok[end])
-                        print("glue2tok", len(glued2tok), glued2tok)
-                        print("tok2glued", len(tok2glued), tok2glued)
-                        print(len(sentence_embeddings))
                         matched_embeddings = sentence_embeddings[glued2tok[start]:glued2tok[end]]
-                        print(len(matched_embeddings))
-                        matched_subtokens = sentence_subtokens[glued2tok[start]:glued2tok[end]]
+                        # matched_subtokens = sentence_subtokens[glued2tok[start]:glued2tok[end]]
                         matched_glued_tokens = glued_tokens[start:end]
-                        print("Matched subtokens {} to glued tokens {}".format(
-                            matched_subtokens, matched_glued_tokens))
+                        # print("Matched subtokens {} to glued tokens {}".format(
+                        #     matched_subtokens, matched_glued_tokens))
                         embedding = np.stack(matched_embeddings).mean(axis=0)
                         entity_embeddings[type_][" ".join(matched_glued_tokens)] += embedding
                         entity_counter[type_][" ".join(matched_glued_tokens)] += 1
