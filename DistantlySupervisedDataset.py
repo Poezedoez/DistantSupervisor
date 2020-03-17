@@ -304,8 +304,12 @@ class DistantlySupervisedDataset:
                         print("sentence_embeddings", len(sentence_embeddings))
                         print("glued2tok", len(glued2tok))
                         print("glued", len(glued_tokens))
-                        matched_embeddings = sentence_embeddings[glued2tok[start]:glued2tok[end]]
+                        print("pointers", glued2tok[start:end+1])
+                        pointers = glued2tok[start:end+1]
+                        matched_embeddings = sentence_embeddings[pointers[0]:pointers[-1]]
+                        print("sentsub", sentence_subtokens[pointers[0]:pointers[-1]])
                         matched_glued_tokens = glued_tokens[start:end]
+                        print("matched_glued_tokens", matched_glued_tokens)
                         embedding = np.stack(matched_embeddings).mean(axis=0)
                         entity_embeddings[type_][" ".join(matched_glued_tokens)] += embedding
                         entity_counter[type_][" ".join(matched_glued_tokens)] += 1
