@@ -270,7 +270,7 @@ class DistantlySupervisedDataset:
                 for position in positions:
                     start, end = position
                     entity_string = " ".join(glued_tokens[start:end]).lower()
-                    print("Found |{}| as |{}|".format(entity_string, type_))
+                    print("Found |{}| as |{}|".format(entity_string.encode('utf-8'), type_))
                     self.statistics["entities"][type_][entity_string] += 1
                     entities.append({"type": type_, "start": start, "end": end})
             return entities
