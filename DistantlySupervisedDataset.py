@@ -242,7 +242,7 @@ class DistantlySupervisedDataset:
 
         return matches
 
-    def _label_sentence(self, sentence_subtokens, document_embeddings, offset, label_function=0):
+    def _label_sentence(self, sentence_subtokens, sentence_embeddings, label_function=0):
         def _label_relations(entities):
             relations = []
             if len(entities) > 1:
@@ -258,9 +258,8 @@ class DistantlySupervisedDataset:
 
         def _label_entities(tokens, tok2glued):
             entities = []
-            sentence_embeddings = document_embeddings[offset+1: offset+1+len(tokens)]  # skip [CLS] and [SEP]
             do_string_matching = (label_function == 0 or label_function == 2)
-            do_knn_matching =  (label_function == 1 or label_function == 2)
+            do_knn_matching = (label_function == 1 or label_function == 2)
             string_matches = self._string_match(tokens, do_string_matching)
             knn_matches = self._knn_match(sentence_embeddings, tok2glued, glued_tokens, do_knn_matching)
             matches = merge_list_dicts(string_matches, knn_matches)
@@ -301,6 +300,10 @@ class DistantlySupervisedDataset:
                 for type_, positions in string_matches.items():
                     for position in positions:
                         start, end = position
+                        print("start/end", start, end)
+                        print("sentence_embeddings", len(sentence_embeddings))
+                        print("glued2tok", len(glued2tok))
+                        print("glued", len(glued_tokens))
                         matched_embeddings = sentence_embeddings[glued2tok[start]:glued2tok[end]]
                         matched_glued_tokens = glued_tokens[start:end]
                         embedding = np.stack(matched_embeddings).mean(axis=0)
