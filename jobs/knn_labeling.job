@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=distantly_supervised_dataset
-#SBATCH --time=4:00:00
+#SBATCH --time=6:00:00
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=16
 #SBATCH --ntasks-per-node=1
@@ -18,10 +18,7 @@ source activate lisaenv
 cp -r $HOME/distantly-supervised-dataset/ $TMPDIR
 cd $TMPDIR/distantly-supervised-dataset
 
-#RUN_NAME="`date +%d_%m_%Y_%H_%M_%S`";
-python DistantlySupervisedDataset.py  --selection 200 300 --output_path "data/DistantlySupervisedDatasets/test/" --label_function 1
-python DistantlySupervisedDataset.py  --selection 0 200 --output_path "data/DistantlySupervisedDatasets/train/" --label_function 1
+python DistantlySupervisedDataset.py  --selection 200 300 --output_path "data/DistantlySupervisedDatasets/test/knn/" --label_function 1
+python DistantlySupervisedDataset.py  --selection 0 200 --output_path "data/DistantlySupervisedDatasets/train/knn/" --label_function 1
 
 cp -r data/DistantlySupervisedDatasets/ $HOME/distantly-supervised-dataset/data/
-#cp outputs_test_${RUN_NAME}.txt $HOME/distantly-supervised-dataset/data/DistantlySupervisedDatasets/
-#cp outputs_train_${RUN_NAME}.txt $HOME/distantly-supervised-dataset/data/DistantlySupervisedDatasets/
