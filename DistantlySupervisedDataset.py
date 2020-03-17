@@ -270,7 +270,7 @@ class DistantlySupervisedDataset:
                 for position in positions:
                     start, end = position
                     entity_string = " ".join(glued_tokens[start:end]).lower()
-                    print("Found |{}| as |{}|".format(entity_string.encode('utf-8'), type_))
+                    # print("Found |{}| as |{}|".format(entity_string.encode('utf-8'), type_))
                     self.statistics["entities"][type_][entity_string] += 1
                     entities.append({"type": type_, "start": start, "end": end})
             return entities
@@ -303,18 +303,18 @@ class DistantlySupervisedDataset:
                 for type_, positions in string_matches.items():
                     for position in positions:
                         start, end = position
-                        print("start/end", start, end)
-                        print("sentence_embeddings", len(sentence_embeddings))
-                        print("glued2tok", len(glued2tok))
-                        print("glued", len(glued_tokens))
-                        print("pointers", glued2tok[start:end+1])
+                        # print("start/end", start, end)
+                        # print("sentence_embeddings", len(sentence_embeddings))
+                        # print("glued2tok", len(glued2tok))
+                        # print("glued", len(glued_tokens))
+                        # print("pointers", glued2tok[start:end+1])
                         pointers = glued2tok[start:end+1]
                         if len(pointers) == 1:  # last token in sentence
                             pointers.append(pointers[-1]+1)
                         matched_embeddings = sentence_embeddings[pointers[0]:pointers[-1]]
-                        print("sentsub", sentence_subtokens[pointers[0]:pointers[-1]])
+                        # print("sentsub", sentence_subtokens[pointers[0]:pointers[-1]])
                         matched_glued_tokens = glued_tokens[start:end]
-                        print("matched_glued_tokens", matched_glued_tokens)
+                        # print("matched_glued_tokens", matched_glued_tokens)
                         embedding = np.stack(matched_embeddings).mean(axis=0)
                         entity_embeddings[type_][" ".join(matched_glued_tokens)] += embedding
                         entity_counter[type_][" ".join(matched_glued_tokens)] += 1
