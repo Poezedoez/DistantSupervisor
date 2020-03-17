@@ -211,23 +211,23 @@ class DistantlySupervisedDataset:
 
         return matches
 
-    def _knn_match(self, sentence_embeddings, tok2glued, glued_tokens, execute=True, threshold=0.8):
+    def _knn_match(self, sentence_embeddings, tok2glued, glued_tokens, execute=True, threshold=0.85):
         matches = {type_: [] for type_ in self.ontology_entities}
         if not execute:
             return matches
-        prev_entity = False
-        start = 0
         for type_ in self.type_arrays:
+            prev_entity = False
+            start = 0
             similarities = cosine_similarity(sentence_embeddings, self.type_arrays[type_])
             max_similarities = similarities.max(axis=1)
-            # max_indices = similarities.argmax(axis=1)
-            for token in tok2glued:
-                score = max_similarities[token]
-                # if score > threshold:
-                #     print(score, glued_tokens[token], self.index_to_string[type_][max_indices[token]])
+            max_indices = similarities.argmax(axis=1)
+            for i, token_pointer in enumerate(tok2glued):
+                score = max_similarities[token_pointer]
+                if score > threshold:
+                    print(score, glued_tokens[token_pointer], self.index_to_string[type_][max_indices[i]])
                 # entity span starts
                 if score > threshold and not prev_entity:
-                    start = token
+                    start = token_pointer
                     prev_entity = True
                     continue
 
@@ -236,12 +236,19 @@ class DistantlySupervisedDataset:
                     prev_entity = True
                     continue
 
-                # etity span ends
+                # entity span ends
                 elif prev_entity:
-                    matches[type_].append((tok2glued[start], tok2glued[token]))
+                    print("tok2glued", len(tok2glued), tok2glued)
+                    # print("pointers", token_pointer, tok2glued[token_pointer])
+                    # matches[type_].append((start, token_pointer))
+                    matches[type_].append((start, token_pointer))
 
-                start = token
+                start = token_pointer
                 prev_entity = False
+
+            # last token of the sentence is entity
+            if score > threshold:
+                matches[type_].append((start, token_pointer+1))
 
         return matches
 
@@ -269,8 +276,9 @@ class DistantlySupervisedDataset:
             for type_, positions in matches.items():
                 for position in positions:
                     start, end = position
-                    entity_string = " ".join(glued_tokens[start:end]).lower()
-                    # print("Found |{}| as |{}|".format(entity_string.encode('utf-8'), type_))
+                    print(start, end)
+                    entity_string = "_".join(glued_tokens[start:end]).lower()
+                    print("Found |{}| as |{}|".format(entity_string, type_))
                     self.statistics["entities"][type_][entity_string] += 1
                     entities.append({"type": type_, "start": start, "end": end})
             return entities
