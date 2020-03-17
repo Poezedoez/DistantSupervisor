@@ -40,7 +40,22 @@ def pretty_write(input_path, output_path):
                 head_tokens = tokens[head_entity["start"]:head_entity["end"]]
                 tail_tokens = tokens[tail_entity["start"]:tail_entity["end"]]
                 f.write("[{}] \t {} \t |{}| \t {} \n".format(i, " ".join(head_tokens), relation["type"], " ".join(tail_tokens)))
-            f.write('\n')    
+            f.write('\n')
+
+def pretty_write_csv(input_path, output_path):
+    with open(input_path, 'r', encoding='utf-8') as f:
+        dataset = json.load(f)
+
+    with open(output_path, 'w', encoding='utf-8') as f:
+        f.write("sentence_id, sentence, entity_x, label_x \n")
+        for i, sentence in enumerate(dataset):
+            tokens = sentence["tokens"]
+            line = "{} {}".format(i, " ".join(tokens))
+            for entity in sentence["entities"]:
+                entity_tokens = tokens[entity["start"]:entity["end"]]
+                line += ", {}, {}".format(" ".join(entity_tokens), entity["type"])
+            line += ' \n'
+            f.write(line)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Print spert json format in a readable way')

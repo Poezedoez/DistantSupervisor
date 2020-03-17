@@ -11,7 +11,7 @@ import argparse
 import csv
 import shutil
 from sklearn.metrics.pairwise import cosine_similarity
-from pretty_print import pretty_write
+from pretty_print import pretty_write, pretty_write_csv
 # import faiss
 
 
@@ -139,6 +139,9 @@ class DistantlySupervisedDataset:
         # Save pretty output of dataset
         pretty_write(dataset_path, self.output_path+'pretty_output.txt')
 
+        # Save some csv output of results
+        pretty_write_csv(dataset_path, self.output_path+'pretty_output.csv')
+
     def print_statistics(self, statistics=None):
         if statistics:
             with open(statistics, 'r', encoding='utf-8') as f:
@@ -217,11 +220,11 @@ class DistantlySupervisedDataset:
         for type_ in self.type_arrays:
             similarities = cosine_similarity(sentence_embeddings, self.type_arrays[type_])
             max_similarities = similarities.max(axis=1)
-            max_indices = similarities.argmax(axis=1)
+            # max_indices = similarities.argmax(axis=1)
             for token in tok2glued:
                 score = max_similarities[token]
-                if score > threshold:
-                    print(score, glued_tokens[token], self.index_to_string[type_][max_indices[token]])
+                # if score > threshold:
+                #     print(score, glued_tokens[token], self.index_to_string[type_][max_indices[token]])
                 # entity span starts
                 if score > threshold and not prev_entity:
                     start = token
