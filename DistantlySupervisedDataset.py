@@ -308,7 +308,7 @@ class DistantlySupervisedDataset:
 #                         print(len(sentence_embeddings))
                         matched_embeddings = sentence_embeddings[glued2tok[start]:glued2tok[end]]
 #                         print(len(matched_embeddings))
-                        matched_subtokens = sentence_subtokens[glued2tok[start]:glued2tok[end]]
+#                        matched_subtokens = sentence_subtokens[glued2tok[start]:glued2tok[end]]
                         matched_glued_tokens = glued_tokens[start:end]
 #                         print("Matched subtokens {} to glued tokens {}".format(
 #                             matched_subtokens, matched_glued_tokens))
