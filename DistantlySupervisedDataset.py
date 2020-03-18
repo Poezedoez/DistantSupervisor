@@ -11,7 +11,7 @@ import argparse
 import csv
 import shutil
 from sklearn.metrics.pairwise import cosine_similarity
-from pretty_print import pretty_write, pretty_write_csv
+from outputs import pretty_write, print_statistics
 # import faiss
 
 
@@ -83,26 +83,30 @@ class DistantlySupervisedDataset:
             ontology_relations_path="data/ontology_relations.csv",
             document_path="data/ScientificDocuments/",
             entity_embedding_path="data/entity_embeddings.json",
-            output_path="data/DistantlySupervisedDatasets/"
+            output_path="data/DistantlySupervisedDatasets/",
+            timestamp=time.strftime("%Y%m%d-%H%M%S"),
+            cos_theta=0.85
     ):
 
         self.ontology_entities = _read_ontology_entities(ontology_entities_path)
         self.ontology_relations = _read_ontology_relations(ontology_relations_path)
         self.embedder = BertEmbedder('data/scibert_scivocab_cased')
-        self.timestamp = time.strftime("%Y%m%d-%H%M%S")
+        self.timestamp = timestamp
         self.document_path = document_path
         self.entity_embedding_path = entity_embedding_path
         self.output_path = output_path + '{}/'.format(self.timestamp)
+        self.cos_theta = cos_theta
         self.statistics = {"relations": Counter(), "relations_total": 0,
                            "entities": {type_: Counter() for type_ in self.ontology_entities},
                            "entity_sentences": 0, "sentences_processed": 0, "entities_total": 0, "tokens_total": 0,
-                           "relation_candidates": 0}
+                           "relation_candidates": 0, "cos_theta": cos_theta}
         self.type_arrays = {}
         self.index_to_string = {}
         self.flist = []
         self.dataset = []
 
-    def create(self, verbose=True, label_function=0, selection=None):
+    def create(self, label_function=0, selection=None):
+        self.statistics["label_function"] = label_function
         if label_function > 0:
             self._load_type_arrays()
         start_time = time.time()
@@ -111,8 +115,6 @@ class DistantlySupervisedDataset:
         end_time = time.time()
         self.statistics["time_taken"] = int(end_time - start_time)
         self._save()
-        if verbose:
-            self.print_statistics()
 
     def _save(self):
         directory = os.path.dirname(self.output_path)
@@ -124,8 +126,10 @@ class DistantlySupervisedDataset:
             json.dump(self.dataset, json_file)
 
         # Save statistics
-        with open(self.output_path + 'statistics.json', 'w', encoding='utf-8') as json_file:
+        statistics_path = self.output_path + 'statistics.json'
+        with open(statistics_path, 'w', encoding='utf-8') as json_file:
             json.dump(self.statistics, json_file)
+        print_statistics(statistics_path)
 
         # Save ontology used
         shutil.copyfile(args.ontology_entities_path, self.output_path + 'ontology_entities.csv')
@@ -138,42 +142,6 @@ class DistantlySupervisedDataset:
 
         # Save pretty output of dataset
         pretty_write(dataset_path, self.output_path+'pretty_output.txt')
-
-        # Save some csv output of results
-        pretty_write_csv(dataset_path, self.output_path+'pretty_output.csv')
-
-    def print_statistics(self, statistics=None):
-        if statistics:
-            with open(statistics, 'r', encoding='utf-8') as f:
-                stats = json.load(f)
-        else:
-            stats = self.statistics
-
-        print("--- STATISTICS ---")
-        print("Processed {} sentences of which {} contained at least one entity".format(
-            stats["sentences_processed"], stats["entity_sentences"]
-        ))
-        print("Time taken: {} seconds".format(stats["time_taken"]))
-        print("--- Entities ---")
-        tokens_per_entity = stats["tokens_total"] / stats["entities_total"] if(
-            stats["entities_total"] != 0
-        ) else 0
-        print("Every {} tokens an entity occurs".format(tokens_per_entity))
-        print("Entities were found in the following classes:")
-        for type_, instance_counter in stats["entities"].items():
-            count = sum([count for _, count in instance_counter.items()])
-            print(type_, count)
-        print("The most frequently labeled entities per class are:")
-        for type_, instance_counter in stats["entities"].items():
-            print("{} \t".format(type_), Counter(instance_counter).most_common(5))
-        print("--- Relations ---")
-        relations_per_sentence = stats["relation_candidates"]/stats["relations_total"] if(
-            stats["relations_total"] != 0
-        ) else 0
-        print("Every {} sentences with at least two entities a relation occurs".format(relations_per_sentence))
-        print("Relations were found in the following classes:")
-        for relation, count in stats["relations"].items():
-            print(relation, count)
 
     def _iter_sentences(self, selection=None, includes_special_tokens=True):
         for document_sentences, document_embeddings in self._read_documents(selection):
@@ -211,7 +179,7 @@ class DistantlySupervisedDataset:
 
         return matches
 
-    def _knn_match(self, sentence_embeddings, tok2glued, glued_tokens, execute=True, threshold=0.85):
+    def _knn_match(self, sentence_embeddings, glued2tok, glued_tokens, execute=True, threshold=0.80):
         matches = {type_: [] for type_ in self.ontology_entities}
         if not execute:
             return matches
@@ -220,14 +188,15 @@ class DistantlySupervisedDataset:
             start = 0
             similarities = cosine_similarity(sentence_embeddings, self.type_arrays[type_])
             max_similarities = similarities.max(axis=1)
-            max_indices = similarities.argmax(axis=1)
-            for i, token_pointer in enumerate(tok2glued):
+            # max_indices = similarities.argmax(axis=1)
+            score = 0
+            for i, token_pointer in enumerate(glued2tok):
                 score = max_similarities[token_pointer]
-                if score > threshold:
-                    print(score, glued_tokens[token_pointer], self.index_to_string[type_][max_indices[i]])
+                # if score > threshold:
+                #     print(score, glued_tokens[i], self.index_to_string[type_][max_indices[token_pointer]])
                 # entity span starts
                 if score > threshold and not prev_entity:
-                    start = token_pointer
+                    start = i
                     prev_entity = True
                     continue
 
@@ -238,16 +207,14 @@ class DistantlySupervisedDataset:
 
                 # entity span ends
                 elif prev_entity:
-                    print("tok2glued", len(tok2glued), tok2glued)
-                    # print("pointers", token_pointer, tok2glued[token_pointer])
-                    # matches[type_].append((start, token_pointer))
-                    matches[type_].append((start, token_pointer))
+                    matches[type_].append((start, i))
 
-                start = token_pointer
+                start = i
                 prev_entity = False
 
             # last token of the sentence is entity
             if score > threshold:
+                print(start, token_pointer+1)
                 matches[type_].append((start, token_pointer+1))
 
         return matches
@@ -266,25 +233,25 @@ class DistantlySupervisedDataset:
                         relations.append({"type": relation, "head": head, "tail": tail})
             return relations
 
-        def _label_entities(tokens, tok2glued):
+        def _label_entities(tokens, glued2tok):
             entities = []
             do_string_matching = (label_function == 0 or label_function == 2)
             do_knn_matching = (label_function == 1 or label_function == 2)
             string_matches = self._string_match(tokens, do_string_matching)
-            knn_matches = self._knn_match(sentence_embeddings, tok2glued, glued_tokens, do_knn_matching)
+            knn_matches = self._knn_match(sentence_embeddings, glued2tok, glued_tokens,
+                                          do_knn_matching, threshold=self.cos_theta)
             matches = merge_list_dicts(string_matches, knn_matches)
             for type_, positions in matches.items():
                 for position in positions:
                     start, end = position
-                    print(start, end)
                     entity_string = "_".join(glued_tokens[start:end]).lower()
-                    print("Found |{}| as |{}|".format(entity_string, type_))
+                    # print("Found |{}| as |{}|".format(entity_string, type_))
                     self.statistics["entities"][type_][entity_string] += 1
                     entities.append({"type": type_, "start": start, "end": end})
             return entities
 
-        glued_tokens, tok2glued, _ = _glue_subtokens(sentence_subtokens)
-        entities = _label_entities(glued_tokens, tok2glued)
+        glued_tokens, _, glued2tok = _glue_subtokens(sentence_subtokens)
+        entities = _label_entities(glued_tokens, glued2tok)
         relations = _label_relations(entities)
         self.statistics["sentences_processed"] += 1
 
@@ -311,18 +278,11 @@ class DistantlySupervisedDataset:
                 for type_, positions in string_matches.items():
                     for position in positions:
                         start, end = position
-                        # print("start/end", start, end)
-                        # print("sentence_embeddings", len(sentence_embeddings))
-                        # print("glued2tok", len(glued2tok))
-                        # print("glued", len(glued_tokens))
-                        # print("pointers", glued2tok[start:end+1])
                         pointers = glued2tok[start:end+1]
                         if len(pointers) == 1:  # last token in sentence
                             pointers.append(pointers[-1]+1)
                         matched_embeddings = sentence_embeddings[pointers[0]:pointers[-1]]
-                        # print("sentsub", sentence_subtokens[pointers[0]:pointers[-1]])
                         matched_glued_tokens = glued_tokens[start:end]
-                        # print("matched_glued_tokens", matched_glued_tokens)
                         embedding = np.stack(matched_embeddings).mean(axis=0)
                         entity_embeddings[type_][" ".join(matched_glued_tokens)] += embedding
                         entity_counter[type_][" ".join(matched_glued_tokens)] += 1
@@ -371,7 +331,10 @@ if __name__ == "__main__":
                         help="start and end of file range for train/test split")
     parser.add_argument('--label_function', type=int, default=0, choices=range(0, 3),
                         help="0 = string, 1 = knn, 2 = string + knn")
+    parser.add_argument('--timestamp', type=str, default=time.strftime("%Y%m%d-%H%M%S"))
+    parser.add_argument('--cos_theta', type=float, default=0.85,
+                        help="similarity threshold for embedding based labeling")
     args = parser.parse_args()
     dataset = DistantlySupervisedDataset(args.ontology_entities_path, args.ontology_relations_path, args.document_path,
-                                         args.entity_embedding_path, args.output_path)
+                                         args.entity_embedding_path, args.output_path, args.timestamp, args.cos_theta)
     dataset.create(label_function=args.label_function, selection=tuple(args.selection))
