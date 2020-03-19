@@ -214,7 +214,6 @@ class DistantlySupervisedDataset:
 
             # last token of the sentence is entity
             if score > threshold:
-                print(start, token_pointer+1)
                 matches[type_].append((start, token_pointer+1))
 
         return matches
