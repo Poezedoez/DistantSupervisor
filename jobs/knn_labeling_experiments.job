@@ -20,7 +20,7 @@ cd $TMPDIR/distantly-supervised-dataset
 
 for i in {70..100..2}
 do
-    THRESHOLD = {i}/100
+    THRESHOLD={i}/100
     python DistantlySupervisedDataset.py  --selection 200 300 --output_path "data/DistantlySupervisedDatasets/test/knn/experiments/$THRESHOLD/" --label_function 1 --cos_theta $THRESHOLD
 done
 
