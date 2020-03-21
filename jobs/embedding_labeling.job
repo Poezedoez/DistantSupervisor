@@ -18,7 +18,8 @@ source activate lisaenv
 cp -r $HOME/distantly-supervised-dataset/ $TMPDIR
 cd $TMPDIR/distantly-supervised-dataset
 
-python DistantlySupervisedDataset.py  --selection 200 300 --output_path "data/DistantlySupervisedDatasets/test/knn/" --label_function 1
-python DistantlySupervisedDataset.py  --selection 0 200 --output_path "data/DistantlySupervisedDatasets/train/knn/" --label_function 1
+RUN_NAME="`date +%d_%m_%Y_%H_%M_%S`";
+python DistantlySupervisedDatasets.py  --selection 0 200 --output_path "data/DistantlySupervisedDatasets/$RUN_NAME/train/" --label_function 1
+python DistantlySupervisedDatasets.py  --selection 200 300 --output_path "data/DistantlySupervisedDatasets/$RUN_NAME/test/" --label_function 1
 
 cp -r data/DistantlySupervisedDatasets/ $HOME/distantly-supervised-dataset/data/

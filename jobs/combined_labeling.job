@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=distantly_supervised_dataset
-#SBATCH --time=4:00:00
+#SBATCH --time=6:00:00
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=16
 #SBATCH --ntasks-per-node=1
@@ -19,7 +19,7 @@ cp -r $HOME/distantly-supervised-dataset/ $TMPDIR
 cd $TMPDIR/distantly-supervised-dataset
 
 RUN_NAME="`date +%d_%m_%Y_%H_%M_%S`";
-python DistantlySupervisedDatasets.py  --selection 0 200 --output_path "data/DistantlySupervisedDatasets/$RUN_NAME/train/" --label_function 0
-python DistantlySupervisedDatasets.py  --selection 200 300 --output_path "data/DistantlySupervisedDatasets/$RUN_NAME/test/" --label_function 0
+python DistantlySupervisedDatasets.py  --selection 0 200 --output_path "data/DistantlySupervisedDatasets/$RUN_NAME/train/" --label_function 2
+python DistantlySupervisedDatasets.py  --selection 200 300 --output_path "data/DistantlySupervisedDatasets/$RUN_NAME/test/" --label_function 2
 
 cp -r data/DistantlySupervisedDatasets/ $HOME/distantly-supervised-dataset/data/
