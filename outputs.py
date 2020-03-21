@@ -59,9 +59,7 @@ def print_statistics(path):
         stats = json.load(json_file)
 
     print("--- STATISTICS ---")
-    label_functions = {0: "string_labeling", 1: "embedding_similarity_labeling",
-                       2: "string labeling in conjunction with embedding similarity"}
-    print("Label function: {}".format(label_functions[stats["label_function"]]))
+    print("Label function: {}".format([stats["label_function"]]))
     print("Threshold on embedding cosine similarity (cos_theta):", stats["cos_theta"])
     print("Processed {} sentences of which {} contained at least one entity".format(
         stats["sentences_processed"], stats["entity_sentences"]
@@ -87,6 +85,7 @@ def print_statistics(path):
     print("Relations were found in the following classes:")
     for relation, count in stats["relations"].items():
         print(relation, count)
+    print()
 
 
 def compare_datasets(path1, path2):
@@ -96,17 +95,24 @@ def compare_datasets(path1, path2):
     with open(path2, 'r', encoding='utf-8') as f:
         dataset2 = json.load(f)
 
-    # with open(output_path, 'w', encoding='utf-8') as csv_file:
-    #     writer = csv.writer(csv_file, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-    #     writer.writerow("sentence_id", "sentence", "entity_x", "label_x")
-    for i, sentence1 in enumerate(dataset1):
-        tokens = sentence1["tokens"]
+    assert len(dataset1)==len(dataset2)
+
+    for sentence1, sentence2 in zip(dataset1, dataset2):
+        tokens1 = sentence1["tokens"]
+        print("|{}| {}".format(sentence1["orig_id"], " ".join(tokens1)))
         print()
         for entity in sentence1["entities"]:
-            entity_tokens = tokens[entity["start"]:entity["end"]]
-            line += ", {}, {}".format(" ".join(entity_tokens), entity["type"])
-        line += ' \n'
-        f.write(line)
+            entity_tokens = tokens1[entity["start"]:entity["end"]]
+            line = "[1] \t {} \t {}".format(" ".join(entity_tokens), entity["type"])
+            print(line)
+        print()
+        tokens2 = sentence2["tokens"]
+        print("|{}| {}".format(sentence2["orig_id"], " ".join(tokens2)))
+        for entity in sentence2["entities"]:
+            entity_tokens = tokens2[entity["start"]:entity["end"]]
+            line = "[2] \t {} \t {}".format(" ".join(entity_tokens), entity["type"])
+            print(line)
+        print('--------------------------------------------------------------------------------------------------')
 
 
 
