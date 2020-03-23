@@ -1,8 +1,8 @@
-id,head,relation,tail
-1,dataset,hasMetric,metric
-2,machine_learning_algorithm,trainedWith,hardware
-3,machine_learning_algorithm,hasProperty,architectural_element
-4,machine_learning_algorithm,builtWith,software_framework
-5,machine_learning_algorithm,usedFor,application_area
-6,technique,usedFor,machine_learning_algorithm
-7,machine_learning_algorithm,scoresOn,dataset
+head,relation,tail
+dataset,hasMetric,metric
+machine_learning_algorithm,trainedWith,hardware
+machine_learning_algorithm,hasProperty,architectural_element
+machine_learning_algorithm,builtWith,software_framework
+machine_learning_algorithm,usedFor,application_area
+technique,usedFor,machine_learning_algorithm
+machine_learning_algorithm,scoresOn,dataset
