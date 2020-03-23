@@ -1,6 +1,11 @@
 import json
 import argparse
 from collections import Counter
+from evaluate import evaluate
+import pandas as pd
+import matplotlib
+import matplotlib.pyplot as plt
+import numpy as np
 
 def pretty_print(path):
     with open(path, 'r', encoding='utf-8') as f:
@@ -103,18 +108,41 @@ def compare_datasets(path1, path2):
         print()
         for entity in sentence1["entities"]:
             entity_tokens = tokens1[entity["start"]:entity["end"]]
-            line = "[1] \t {} \t {}".format(" ".join(entity_tokens), entity["type"])
+            line = "[gold] \t {} \t {}".format(" ".join(entity_tokens), entity["type"])
             print(line)
         print()
         tokens2 = sentence2["tokens"]
-        print("|{}| {}".format(sentence2["orig_id"], " ".join(tokens2)))
         for entity in sentence2["entities"]:
             entity_tokens = tokens2[entity["start"]:entity["end"]]
-            line = "[2] \t {} \t {}".format(" ".join(entity_tokens), entity["type"])
+            line = "[pred] \t {} \t {}".format(" ".join(entity_tokens), entity["type"])
             print(line)
-        print('--------------------------------------------------------------------------------------------------')
+        print('----------------------------------------------------------------------------------------------------------------------------------------------')
 
+def plot(cos_thetas, run_date="21_03_2020_11_51_28", set_="test", averaging="micro"):
 
+    precisions = []
+    recalls = []
+    f1s = []
+
+    for cos_theta in cos_thetas:
+        gt_path = "data/{}/{}/{}/string_labeling/dataset.json".format(run_date, set_, cos_theta)
+        pred_path =  "data/{}/{}/{}/embedding_labeling/dataset.json".format(run_date, set_, cos_theta)
+        micro_macro_averages = evaluate(gt_path, pred_path)
+        offset = 0 if averaging=="micro" else 3
+        precisions.append(micro_macro_averages[0+offset])
+        recalls.append(micro_macro_averages[1+offset])
+        f1s.append(micro_macro_averages[2+offset])
+
+    plt.title("Embedding similarity matches (pred) compared with string matches (gold) \n using different cosine similarity thresholds")
+    plt.xticks(np.linspace(0.72, 1, 15))
+    plt.plot(cos_thetas, precisions, label="precision")
+    plt.plot(cos_thetas, recalls, label="recall")
+    plt.plot(cos_thetas, f1s, label="f1")
+    plt.xlabel(r'$cos( \theta )$')
+    plt.ylabel("p/r/f1 ({})".format(averaging))
+
+    plt.legend()
+    plt.savefig("data/{}/plot_embedding_labeling_{}.png".format(run_date, averaging), dpi=720)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Print spert json format in a readable way')

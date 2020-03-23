@@ -81,14 +81,14 @@ def _score(gt: List[List[Tuple]], pred: List[List[Tuple]], print_results: bool =
                 gt_flat.append(t)
                 types.add(t)
             else:
-                gt_flat.append(0)
+                gt_flat.append("0")
 
             if s in sample_pred:
                 t = s[2]
                 pred_flat.append(t)
                 types.add(t)
             else:
-                pred_flat.append(0)
+                pred_flat.append("0")
 
     # for gt, pred in zip(gt_flat, pred_flat):
         # print(gt)
@@ -148,7 +148,6 @@ def evaluate(gt_path, pred_path):
     print("An entity is considered correct if the entity type and span is predicted correctly")
     print("")
     ner_eval = _score(gt_entities, pred_entities, print_results=True)
-
     print("")
     print("--- Relations ---")
     print("")
@@ -156,7 +155,10 @@ def evaluate(gt_path, pred_path):
     print("A relation is considered correct if the relation type and the two "
             "related entities are predicted correctly (in span and entity type)")
     print("")
-    rel_nec_eval = _score(gt_relations, pred_relations, print_results=True)
+    print("Soon...")
+    # rel_nec_eval = _score(gt_relations, pred_relations, print_results=True)
+
+    return ner_eval
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Evaluate spert json formatted dataset')
