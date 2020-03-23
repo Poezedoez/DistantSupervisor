@@ -11,8 +11,9 @@ import argparse
 import csv
 import shutil
 from sklearn.metrics.pairwise import cosine_similarity
-from outputs import pretty_write, print_statistics
-# import faiss
+from outputs import print_dataset, print_statistics
+import pandas as pd
+import copy
 
 
 def _read_ontology_entities(path):
@@ -27,14 +28,17 @@ def _read_ontology_entities(path):
 
 
 def _read_ontology_relations(path):
-    ontology_relations = {}
-    with open(path, 'r', encoding='utf-8') as csv_file:
-        csv_reader = csv.reader(csv_file)
-        next(csv_reader, None)  # skip headers
-        for _, head, _, _ in csv_reader:
-            ontology_relations[head] = {}
-        for _, head, relation, tail in csv_reader:
-            ontology_relations[head][tail] = relation
+    df = pd.read_csv(path)
+    print("Relation rules:")
+    print(df)
+    ontology_relations = {head: {} for head in df['head']}
+    for head, tail, relation in zip(df['head'], df['tail'], df['relation']):
+        ontology_relations[head][tail] = relation
+    # with open(path, 'r', encoding='utf-8') as csv_file:
+    #     csv_reader = csv.reader(csv_file)
+    #     next(csv_reader, None)  # skip headers
+    #     for _, head, relation, tail in csv_reader:
+            
 
     return ontology_relations
 
@@ -136,7 +140,7 @@ class DistantlySupervisedDatasets:
             print_statistics(statistics_path)
             
             # Save pretty output of labeled examples
-            pretty_write(dataset_path, self.output_path+'{}/classified_examples.txt'.format(label_function))
+            print_dataset(dataset_path, self.output_path+'{}/classified_examples.txt'.format(label_function))
 
         # Save ontology used
         shutil.copyfile(args.ontology_entities_path, self.output_path + 'ontology_entities.csv')
@@ -178,7 +182,7 @@ class DistantlySupervisedDatasets:
         global_statistics["sentences_processed"] = 0
         global_statistics["cos_theta"] = self.cos_theta
 
-        return {dataset: label_statistics.copy() for dataset in self.datasets}, global_statistics
+        return {dataset: copy.deepcopy(label_statistics) for dataset in self.datasets}, global_statistics
 
     def _string_match(self, tokens, execute=True):
         matches = {type_: [] for type_ in self.ontology_entities}
@@ -247,10 +251,12 @@ class DistantlySupervisedDatasets:
             if len(entities) < 2:
                 return relations
             pairs = [(a, b) for a in range(0, len(entities)) for b in range(0, len(entities))]
-            for head, tail in pairs:
-                relation = self.ontology_relations.get(entities[head]["type"], {}).get(entities[tail]["type"])
+            for head_index, tail_index in pairs:
+                head = entities[head_index]["type"]
+                tail = entities[tail_index]["type"]
+                relation = self.ontology_relations.get(head, {}).get(tail, None)
                 if relation:
-                    relations.append({"type": relation, "head": head, "tail": tail})
+                    relations.append({"type": relation, "head": head_index, "tail": tail_index})
 
             return relations
 
@@ -319,7 +325,6 @@ class DistantlySupervisedDatasets:
         if len(entities) > 1:
             self.label_statistics[label_function]["relation_candidates"] += 1
         if relations:
-            self.label_statistics[label_function]["relation_sentences"] += 1
             for relation in relations:
                 self.label_statistics[label_function]["relations"][relation["type"]] += 1
 
