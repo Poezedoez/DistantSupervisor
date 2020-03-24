@@ -18,7 +18,7 @@ source activate lisaenv
 RUN_NAME="`date +%d_%m_%Y_%H_%M_%S`";
 for i in 0.7 0.72 0.74 0.76 0.78 0.8 0.82 0.84 0.86 0.88 0.9 0.92 0.94 0.96 0.98 1.0
 do
-    echo $i
+    echo $i &
 done
 wait
 
