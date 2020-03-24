@@ -24,5 +24,6 @@ for i in 0.7 0.72 0.74 0.76 0.78 0.8 0.82 0.84 0.86 0.88 0.9 0.92 0.94 0.96 0.98
 do
     python DistantlySupervisedDatasets.py  --selection 200 300 --output_path "data/DistantlySupervisedDatasets/$RUN_NAME/test/$i/" --label_function 2 --cos_theta $i &
 done
+wait
 
 cp -r data/DistantlySupervisedDatasets/ $HOME/distantly-supervised-dataset/data/
