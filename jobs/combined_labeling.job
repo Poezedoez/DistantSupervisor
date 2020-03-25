@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=distantly_supervised_dataset
-#SBATCH --time=6:00:00
+#SBATCH --time=12:00:00
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=16
 #SBATCH --ntasks-per-node=1
@@ -19,13 +19,10 @@ cp -r $HOME/distantly-supervised-dataset/ $TMPDIR
 cd $TMPDIR/distantly-supervised-dataset
 
 RUN_NAME="`date +%d_%m_%Y_%H_%M_%S`";
-for i in 0.80 0.86
-do
-    python DistantlySupervisedDatasets.py  --selection 0 500 --output_path "data/DistantlySupervisedDatasets/$RUN_NAME/train/$i/" --label_function 2 --cos_theta $i &
-    python DistantlySupervisedDatasets.py  --selection 500 700 --output_path "data/DistantlySupervisedDatasets/$RUN_NAME/dev/$i/" --label_function 2 --cos_theta $i &
-    python DistantlySupervisedDatasets.py  --selection 700 900 --output_path "data/DistantlySupervisedDatasets/$RUN_NAME/test/$i/" --label_function 2 --cos_theta $i &
-done
-wait
+COS_THETA=0.83
+python DistantlySupervisedDatasets.py  --selection 0 500 --output_path "data/DistantlySupervisedDatasets/$RUN_NAME/train/" --label_function 2 --cos_theta $COS_THETA
+python DistantlySupervisedDatasets.py  --selection 500 700 --output_path "data/DistantlySupervisedDatasets/$RUN_NAME/dev/" --label_function 2 --cos_theta $COS_THETA
+python DistantlySupervisedDatasets.py  --selection 700 900 --output_path "data/DistantlySupervisedDatasets/$RUN_NAME/test/" --label_function 2 --cos_theta $COS_THETA
 
 cp -r data/DistantlySupervisedDatasets/ $HOME/distantly-supervised-dataset/data/
 
