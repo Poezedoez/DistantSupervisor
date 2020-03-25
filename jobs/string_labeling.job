@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=distantly_supervised_dataset
-#SBATCH --time=4:00:00
+#SBATCH --time=12:00:00
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=16
 #SBATCH --ntasks-per-node=1
