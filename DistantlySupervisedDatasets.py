@@ -11,7 +11,7 @@ import argparse
 import csv
 import shutil
 from sklearn.metrics.pairwise import cosine_similarity
-from outputs import print_dataset, print_statistics
+from outputs import print_dataset, print_statistics, read_types
 import pandas as pd
 import copy
 
@@ -29,15 +29,9 @@ def _read_ontology_entities(path):
 
 def _read_ontology_relations(path):
     df = pd.read_csv(path)
-    print("Relation rules:")
-    print(df)
     ontology_relations = {head: {} for head in df['head']}
     for head, tail, relation in zip(df['head'], df['tail'], df['relation']):
         ontology_relations[head][tail] = relation
-    # with open(path, 'r', encoding='utf-8') as csv_file:
-    #     csv_reader = csv.reader(csv_file)
-    #     next(csv_reader, None)  # skip headers
-    #     for _, head, relation, tail in csv_reader:
             
 
     return ontology_relations
@@ -94,6 +88,7 @@ class DistantlySupervisedDatasets:
 
         self.ontology_entities = _read_ontology_entities(ontology_entities_path)
         self.ontology_relations = _read_ontology_relations(ontology_relations_path)
+        self.types = read_types(ontology_entities_path, ontology_relations_path)
         self.embedder = BertEmbedder('data/scibert_scivocab_cased')
         self.timestamp = timestamp
         self.document_path = document_path
@@ -132,9 +127,8 @@ class DistantlySupervisedDatasets:
             # Save dataset statistics
             statistics_path = self.output_path + '{}/statistics.json'.format(label_function)
             self.global_statistics["label_function"] = label_function
-            # print(self.label_statistics[label_function])
             self.label_statistics[label_function].update(self.global_statistics)
-            # print(self.label_statistics[label_function])
+
             with open(statistics_path, 'w', encoding='utf-8') as json_file:
                 json.dump(self.label_statistics[label_function], json_file)
             print_statistics(statistics_path)
@@ -145,6 +139,10 @@ class DistantlySupervisedDatasets:
         # Save ontology used
         shutil.copyfile(args.ontology_entities_path, self.output_path + 'ontology_entities.csv')
         shutil.copyfile(args.ontology_relations_path, self.output_path + 'ontology_relations.csv')
+
+        # Save ontology types
+        with open(self.output_path+'ontology_types.json', 'w', encoding='utf-8') as json_file:
+            json.dump(self.types, json_file)
 
         # Save list of selected documents used for the split
         with open(self.output_path + 'filelist.txt', 'w', encoding='utf-8') as txt_file:

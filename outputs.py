@@ -100,6 +100,15 @@ def compare_datasets(path1, path2):
             print(line)
         print('----------------------------------------------------------------------------------------------------------------------------------------------')
 
+def read_types(ontology_path, relations_path):
+    types = {}
+    entities_df = pd.read_csv(ontology_path)
+    relations_df = pd.read_csv(relations_path)
+    types["entities"] = {type_:{"short": type_, "verbose": type_} for type_ in set(entities_df["Class"])}
+    types["relations"] = {type_:{"short": type_, "verbose": type_} for type_ in set(relations_df["relation"])}
+    
+    return types
+
 def plot(cos_thetas, run_date="21_03_2020_11_51_28", set_="test", averaging="micro"):
 
     precisions = []

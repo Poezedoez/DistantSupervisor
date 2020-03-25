@@ -24,10 +24,6 @@ do
     python DistantlySupervisedDatasets.py  --selection 0 200 --output_path "data/DistantlySupervisedDatasets/$RUN_NAME/train/$i/" --label_function 2 --cos_theta $i &
     python DistantlySupervisedDatasets.py  --selection 200 300 --output_path "data/DistantlySupervisedDatasets/$RUN_NAME/test/$i/" --label_function 2 --cos_theta $i &
 done
-echo "first execution finished"
-echo "`date +%d_%m_%Y_%H_%M_%S`"
 wait
-echo "last execution finished"
-echo "`date +%d_%m_%Y_%H_%M_%S`"
 
 cp -r data/DistantlySupervisedDatasets/ $HOME/distantly-supervised-dataset/data/
