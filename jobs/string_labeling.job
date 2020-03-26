@@ -19,13 +19,13 @@ cp -r $HOME/distantly-supervised-dataset/ $TMPDIR
 cd $TMPDIR/distantly-supervised-dataset
 
 RUN_NAME="`date +%d_%m_%Y_%H_%M_%S`";
-python DistantlySupervisedDatasets.py  --selection 0 500 --output_path "data/DistantlySupervisedDatasets/$RUN_NAME/train/" --label_function 0
+python DistantlySupervisedDatasets.py  --selection 0 500 --output_path "data/DistantlySupervisedDatasets/$RUN_NAME/train/" --label_function 0 &
 train_process=$! &
 
-python DistantlySupervisedDatasets.py  --selection 500 700 --output_path "data/DistantlySupervisedDatasets/$RUN_NAME/dev/" --label_function 0
+python DistantlySupervisedDatasets.py  --selection 500 700 --output_path "data/DistantlySupervisedDatasets/$RUN_NAME/dev/" --label_function 0 &
 dev_process=$! &
 
-python DistantlySupervisedDatasets.py  --selection 700 900 --output_path "data/DistantlySupervisedDatasets/$RUN_NAME/test/" --label_function 0
+python DistantlySupervisedDatasets.py  --selection 700 900 --output_path "data/DistantlySupervisedDatasets/$RUN_NAME/test/" --label_function 0 &
 test_process=$! &
 
 wait $train_process
