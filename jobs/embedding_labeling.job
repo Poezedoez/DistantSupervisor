@@ -20,8 +20,17 @@ cd $TMPDIR/distantly-supervised-dataset
 
 RUN_NAME="`date +%d_%m_%Y_%H_%M_%S`";
 COS_THETA=0.83
-python DistantlySupervisedDatasets.py  --selection 0 500 --output_path "data/DistantlySupervisedDatasets/$RUN_NAME/train/" --label_function 1 --cos_theta $COS_THETA
-python DistantlySupervisedDatasets.py  --selection 500 700 --output_path "data/DistantlySupervisedDatasets/$RUN_NAME/dev/" --label_function 1 --cos_theta $COS_THETA
-python DistantlySupervisedDatasets.py  --selection 700 900 --output_path "data/DistantlySupervisedDatasets/$RUN_NAME/test/" --label_function 1 --cos_theta $COS_THETA
 
+python DistantlySupervisedDatasets.py  --selection 0 500 --output_path "data/DistantlySupervisedDatasets/$RUN_NAME/train/" --label_function 1 --cos_theta $COS_THETA &
+train_process=$! &
+
+python DistantlySupervisedDatasets.py  --selection 500 700 --output_path "data/DistantlySupervisedDatasets/$RUN_NAME/dev/" --label_function 1 --cos_theta $COS_THETA &
+dev_process=$! &
+
+python DistantlySupervisedDatasets.py  --selection 700 900 --output_path "data/DistantlySupervisedDatasets/$RUN_NAME/test/" --label_function 1 --cos_theta $COS_THETA &
+test_process=$! &
+
+wait $train_process
+wait $dev_process
+wait $test_process
 cp -r data/DistantlySupervisedDatasets/ $HOME/distantly-supervised-dataset/data/
