@@ -11,46 +11,11 @@ import argparse
 import csv
 import shutil
 from sklearn.metrics.pairwise import cosine_similarity
-from outputs import print_dataset, print_statistics, read_types
+from outputs import print_dataset, print_statistics
+from read import read_ontology_entities, read_ontology_relations, read_types
+from utils import glue_subtokens
 import pandas as pd
 import copy
-
-
-def _read_ontology_entities(path):
-    ontology_entities = defaultdict(list)
-    with open(path, 'r', encoding='utf-8') as csv_file:
-        csv_reader = csv.reader(csv_file)
-        next(csv_reader, None)  # skip headers
-        for _, class_, instance in csv_reader:
-            ontology_entities[class_].append(instance)
-
-    return ontology_entities
-
-
-def _read_ontology_relations(path):
-    df = pd.read_csv(path)
-    ontology_relations = {head: {} for head in df['head']}
-    for head, tail, relation in zip(df['head'], df['tail'], df['relation']):
-        ontology_relations[head][tail] = relation
-            
-
-    return ontology_relations
-
-
-def _glue_subtokens(subtokens):
-    glued_tokens = []
-    tok2glued = []
-    glued2tok = []
-    for i, token in enumerate(subtokens):
-        if token.startswith('##'):
-            glued_tokens[len(glued_tokens) - 1] = glued_tokens[len(glued_tokens) - 1] + token.replace('##', '')
-        else:
-            glued2tok.append(i)
-            glued_tokens.append(token)
-
-        tok2glued.append(len(glued_tokens) - 1)
-
-    return glued_tokens, tok2glued, glued2tok
 
 
 class DistantlySupervisedDatasets:
@@ -61,6 +26,8 @@ class DistantlySupervisedDatasets:
             subfolders named with document id's
         entity_embedding_path (str): path to the precalculated entity embeddings of the ontology
         output_path (str): path to store results
+        timestamp_given (bool): whether a time stamp is included in the output path
+
     Attr:
         ontology (dict): ontology loaded with json from the given path
         embedder (Embedder): embedder used for tokenization and obtaining embeddings
@@ -68,10 +35,12 @@ class DistantlySupervisedDatasets:
         document_path (str): stored document path from init argument
         entity_embedding_path (str): stored entity embedding path from init argument
         output_path (str): stored output path from init argument
-        statistics (dict): dict to store statistics from creation process
+        label_statistics (dict): dict to store statistics per label function
+        global_statistics (dict): dict to store shared statistics between different label functions
         type_arrays (dict): dict of instance embeddings stacked for one class
         flist (list): list of files used
-        dataset (list): list of annotated sentence datapoints
+        label_function_names (dict): mapping of label function (int) to its name (str)
+        datasets (dict): list of annotated sentence datapoints
         
     """
 
@@ -82,24 +51,23 @@ class DistantlySupervisedDatasets:
             document_path="data/ScientificDocuments/",
             entity_embedding_path="data/entity_embeddings.json",
             output_path="data/DistantlySupervisedDatasets/",
-            timestamp=time.strftime("%Y%m%d-%H%M%S"),
-            cos_theta=0.85
+            timestamp_given=False,
+            cos_theta=0.83
     ):
 
-        self.ontology_entities = _read_ontology_entities(ontology_entities_path)
-        self.ontology_relations = _read_ontology_relations(ontology_relations_path)
+        self.ontology_entities = read_ontology_entities(ontology_entities_path)
+        self.ontology_relations = read_ontology_relations(ontology_relations_path)
         self.types = read_types(ontology_entities_path, ontology_relations_path)
         self.embedder = BertEmbedder('data/scibert_scivocab_cased')
-        self.timestamp = timestamp
+        self.timestamp = '' if timestamp_given else time.strftime("%Y%m%d-%H%M%S")+'/'
         self.document_path = document_path
         self.entity_embedding_path = entity_embedding_path
-        self.output_path = output_path
+        self.output_path = output_path + self.timestamp
         self.cos_theta = cos_theta
         self.type_arrays = {}
         self.index_to_string = {}
         self.flist = []
         self.label_function_names = {0: "string_labeling", 1: "embedding_labeling", 2: "combined_labeling"}
-        # self.label_functions = {0: self._string_match, 1: self._embedding_match, 2: self._combined_match}
         self.datasets = {"string_labeling": [], "embedding_labeling": [], "combined_labeling": []}
         self.label_statistics, self.global_statistics = self._prepare_statistics()
 
@@ -116,8 +84,6 @@ class DistantlySupervisedDatasets:
     def _save(self):       
         # Save datasets of different labeling functions
         for label_function, dataset in self.datasets.items():
-            if not dataset:
-                continue
             dataset_path = self.output_path + '{}/dataset.json'.format(label_function)
             directory = os.path.dirname(dataset_path)
             Path(directory).mkdir(parents=True, exist_ok=True)
@@ -139,6 +105,10 @@ class DistantlySupervisedDatasets:
         # Save ontology used
         shutil.copyfile(args.ontology_entities_path, self.output_path + 'ontology_entities.csv')
         shutil.copyfile(args.ontology_relations_path, self.output_path + 'ontology_relations.csv')
+
+        # Save used lexical ontology embeddings
+        if os.path.exists(self.entity_embedding_path):
+            shutil.copyfile(args.ontology_entities_path, self.output_path + 'entity_embeddings.json')
 
         # Save ontology types
         with open(self.output_path+'ontology_types.json', 'w', encoding='utf-8') as json_file:
@@ -162,6 +132,7 @@ class DistantlySupervisedDatasets:
         path = self.document_path
         self.flist = os.listdir(path) if not selection else os.listdir(path)[selection[0]:selection[1]]
         for folder in self.flist:
+            print(folder)
             text_path = glob.glob(path + "{}/representations/".format(folder) + "text_sentences|*.tokens")[0]
             with open(text_path, 'r', encoding='utf-8') as text_json:
                 text = json.load(text_json)
@@ -190,7 +161,7 @@ class DistantlySupervisedDatasets:
         for type_, string_instances in self.ontology_entities.items():
             for string_instance in string_instances:
                 tokenized_string = [token.lower() for token in self.embedder.tokenize(string_instance)]
-                glued_string, _, _ = _glue_subtokens(tokenized_string)
+                glued_string, _, _ = glue_subtokens(tokenized_string)
                 string_length = len(glued_string)
                 matches[type_] += [(occ, occ + string_length) for occ in KnuthMorrisPratt(tokens, glued_string)]
 
@@ -205,13 +176,9 @@ class DistantlySupervisedDatasets:
             start = 0
             similarities = cosine_similarity(sentence_embeddings, self.type_arrays[type_])
             max_similarities = similarities.max(axis=1)
-            # max_indices = similarities.argmax(axis=1)
             score = 0
             for i, token_pointer in enumerate(glued2tok):
                 score = max_similarities[token_pointer]
-                # if score > threshold:
-                #     print(score, glued_tokens[i], self.index_to_string[type_][max_indices[token_pointer]])
-                # entity span starts
                 if score > threshold and not prev_entity:
                     start = i
                     prev_entity = True
@@ -267,7 +234,7 @@ class DistantlySupervisedDatasets:
 
             return entities
 
-        glued_tokens, _, glued2tok = _glue_subtokens(sentence_subtokens)
+        glued_tokens, _, glued2tok = glue_subtokens(sentence_subtokens)
 
         # Find string entity matches
         do_string_matching = (label_function == 0 or label_function == 2)
@@ -289,7 +256,7 @@ class DistantlySupervisedDatasets:
         combined_relations = label_relations(combined_entities)
         
         self.global_statistics["sentences_processed"] += 1
-        if not string_entities: # use all sentences with at least one string match
+        if not string_entities and label_function != 1: # use all sentences with at least one string match
             return
 
         self._add_training_instance(glued_tokens, string_entities, string_relations, "string_labeling")
@@ -332,7 +299,7 @@ class DistantlySupervisedDatasets:
             entity_embeddings = {type_: defaultdict(lambda: np.zeros(768)) for type_ in self.ontology_entities}
             entity_counter = {type_: Counter() for type_ in self.ontology_entities.keys()}
             for sentence_subtokens, sentence_embeddings in self._iter_sentences(selection=args.selection):
-                glued_tokens, _, glued2tok = _glue_subtokens(sentence_subtokens)
+                glued_tokens, _, glued2tok = glue_subtokens(sentence_subtokens)
                 string_matches = self._string_match(glued_tokens)
                 for type_, positions in string_matches.items():
                     for position in positions:
@@ -390,10 +357,10 @@ if __name__ == "__main__":
                         help="start and end of file range for train/test split")
     parser.add_argument('--label_function', type=int, default=2, choices=range(0, 3),
                         help="0 = string, 1 = embedding, 2 = string + embedding")
-    parser.add_argument('--timestamp', type=str, default=time.strftime("%Y%m%d-%H%M%S"))
-    parser.add_argument('--cos_theta', type=float, default=0.85,
+    parser.add_argument('--timestamp_given', default=False, action="store_true")
+    parser.add_argument('--cos_theta', type=float, default=0.83,
                         help="similarity threshold for embedding based labeling")
     args = parser.parse_args()
     dataset = DistantlySupervisedDatasets(args.ontology_entities_path, args.ontology_relations_path, args.document_path,
-                                         args.entity_embedding_path, args.output_path, args.timestamp, args.cos_theta)
+                                         args.entity_embedding_path, args.output_path, args.timestamp_given, args.cos_theta)
     dataset.create(label_function=args.label_function, selection=tuple(args.selection))

@@ -7,6 +7,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import sys
+import csv
+from read import read_ontology_entities
 
 def print_dataset(input_path, output_path=None):
     with open(input_path, 'r', encoding='utf-8') as f:
@@ -74,40 +76,50 @@ def print_statistics(path):
         print(relation, count)
     print()
 
+def write_entities_without_duplicates(ontology_path, dataset_path, output_path='entity_candidates.csv'):
+    ontology_entities = read_ontology_entities(ontology_path)
+    entity_set = set([entity.lower() for entities in ontology_entities.values() for entity in entities])
+    with open(dataset_path, 'r', encoding='utf-8') as json_file:
+        dataset = json.load(json_file)
 
-def compare_datasets(path1, path2):
-    with open(path1, 'r', encoding='utf-8') as f:
-        dataset1 = json.load(f)
+    with open(output_path, 'w') as csvfile:
+        writer = csv.writer(csvfile, quotechar='|', quoting=csv.QUOTE_MINIMAL)
+        for sentence in dataset:
+            entities = sentence["entities"]
+            tokens = sentence["tokens"]
+            for e in entities:
+                entity_string = ' '.join(tokens[e["start"]:e["end"]]).lower()
+                if entity_string in entity_set:
+                    continue
+                else:
+                    writer.writerow([entity_string, e["type"], ' '.join(tokens)])
+                    entity_set.add(entity_string)
+    
 
-    with open(path2, 'r', encoding='utf-8') as f:
-        dataset2 = json.load(f)
+def compare_datasets(gt_path, pred_path):
+    with open(gt_path, 'r', encoding='utf-8') as f:
+        gt_dataset = json.load(f)
 
-    assert len(dataset1)==len(dataset2)
+    with open(pred_path, 'r', encoding='utf-8') as f:
+        pred_dataset = json.load(f)
 
-    for sentence1, sentence2 in zip(dataset1, dataset2):
-        tokens1 = sentence1["tokens"]
-        print("|{}| {}".format(sentence1["orig_id"], " ".join(tokens1)))
+    assert len(gt_dataset)==len(pred_dataset)
+
+    for gt_sentence, pred_sentence in zip(gt_dataset, pred_dataset):
+        gt_tokens = gt_sentence["tokens"]
+        print("|{}| {}".format(gt_sentence["orig_id"], " ".join(gt_tokens)))
         print()
-        for entity in sentence1["entities"]:
-            entity_tokens = tokens1[entity["start"]:entity["end"]]
+        for entity in gt_sentence["entities"]:
+            entity_tokens = gt_tokens[entity["start"]:entity["end"]]
             line = "[gold] \t {} \t {}".format(" ".join(entity_tokens), entity["type"])
             print(line)
         print()
-        tokens2 = sentence2["tokens"]
-        for entity in sentence2["entities"]:
-            entity_tokens = tokens2[entity["start"]:entity["end"]]
+        pred_tokens = pred_sentence["tokens"]
+        for entity in pred_sentence["entities"]:
+            entity_tokens = pred_tokens[entity["start"]:entity["end"]]
             line = "[pred] \t {} \t {}".format(" ".join(entity_tokens), entity["type"])
             print(line)
         print('----------------------------------------------------------------------------------------------------------------------------------------------')
-
-def read_types(ontology_path, relations_path):
-    types = {}
-    entities_df = pd.read_csv(ontology_path)
-    relations_df = pd.read_csv(relations_path)
-    types["entities"] = {type_:{"short": type_, "verbose": type_} for type_ in set(entities_df["Class"])}
-    types["relations"] = {type_:{"short": type_, "verbose": type_} for type_ in set(relations_df["relation"])}
-    
-    return types
 
 def plot(cos_thetas, run_date="21_03_2020_11_51_28", set_="test", averaging="micro"):
 
@@ -136,11 +148,7 @@ def plot(cos_thetas, run_date="21_03_2020_11_51_28", set_="test", averaging="mic
     plt.savefig("data/{}/plot_embedding_labeling_{}.png".format(run_date, averaging), dpi=720)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Print spert json format in a readable way')
-    parser.add_argument('path', type=str, help='path to the dataset.json file')
-    args = parser.parse_args()
-    print_dataset(args.path)
-    # in_path = 'data/DistantlySupervisedDatasets/train/string/20200317-132432/dataset.json'
-    # out_path = "sentences.txt"
-    # print_sentences(in_path, out_path)
+    in_path = 'data/DistantlySupervisedDatasets/26_03_2020_09_04_56/train/embedding_labeling/dataset.json'
+    ontology_path = "data/ontology_entities.csv"
+    write_entities_without_duplicates(ontology_path, in_path)
 
