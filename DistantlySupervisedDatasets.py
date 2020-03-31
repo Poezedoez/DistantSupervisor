@@ -289,7 +289,7 @@ class DistantlySupervisedDatasets:
         combined_relations = label_relations(combined_entities)
         
         self.global_statistics["sentences_processed"] += 1
-        if not string_entities: # use all sentences with at least one string match
+        if not string_entities or label_function == 1: # use all sentences with at least one string match
             return
 
         self._add_training_instance(glued_tokens, string_entities, string_relations, "string_labeling")

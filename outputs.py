@@ -57,6 +57,7 @@ def print_statistics(path):
         stats["entities_total"] != 0
     ) else 0
     print("Every {} tokens an entity occurs".format(tokens_per_entity))
+    print("A total of {} token spans were labeled as entities".format(stats["entities_total"]))
     print("Entities were found in the following classes:")
     for type_, instance_counter in stats["entities"].items():
         count = sum([count for _, count in instance_counter.items()])
@@ -69,6 +70,7 @@ def print_statistics(path):
         stats["relations_total"] != 0
     ) else 0
     print("Every {} sentences with at least two entities a relation occurs".format(relations_per_sentence))
+    print("A total of {} entity pairs were labeled as relations".format(stats["relations_total"]))
     print("Relations were found in the following classes:")
     for relation, count in stats["relations"].items():
         print(relation, count)
@@ -105,7 +107,7 @@ def read_types(ontology_path, relations_path):
     entities_df = pd.read_csv(ontology_path)
     relations_df = pd.read_csv(relations_path)
     types["entities"] = {type_:{"short": type_, "verbose": type_} for type_ in set(entities_df["Class"])}
-    types["relations"] = {type_:{"short": type_, "verbose": type_} for type_ in set(relations_df["relation"])}
+    types["relations"] = {type_:{"short": type_, "verbose": type_, "symmetric": "false"} for type_ in set(relations_df["relation"])}
     
     return types
 
