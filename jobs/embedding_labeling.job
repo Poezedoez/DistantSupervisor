@@ -20,17 +20,41 @@ cd $TMPDIR/distantly-supervised-dataset
 
 RUN_NAME="`date +%d_%m_%Y_%H_%M_%S`";
 COS_THETA=0.83
+EMBEDDING_LABELING=1
+V=5
+ENT_PATH="data/ontology/v${V}_ontology_entities.csv" 
+REL_PATH="data/ontology/v${V}_ontology_relations.csv" 
+EMB_PATH="data/ontology/v${V}_entity_embeddings.json"
 
-python DistantlySupervisedDatasets.py  --selection 0 500 --output_path "data/DistantlySupervisedDatasets/$RUN_NAME/train/" --label_function 1 --cos_theta $COS_THETA &
-train_process=$! &
 
-python DistantlySupervisedDatasets.py  --selection 500 700 --output_path "data/DistantlySupervisedDatasets/$RUN_NAME/dev/" --label_function 1 --cos_theta $COS_THETA &
-dev_process=$! &
+python DistantlySupervisedDatasets.py  \
+    --selection 0 500 \
+    --output_path "data/DistantlySupervisedDatasets/ontology_v$V/$RUN_NAME/train/" \
+    --timestamp_given \
+    --label_function $EMBEDDING_LABELING \
+    --cos_theta $COS_THETA \
+    --ontology_entities_path $ENT_PATH \
+    --ontology_relations_path $REL_PATH \
+    --entity_embedding_path $EMB_PATH
 
-python DistantlySupervisedDatasets.py  --selection 700 900 --output_path "data/DistantlySupervisedDatasets/$RUN_NAME/test/" --label_function 1 --cos_theta $COS_THETA &
-test_process=$! &
+python DistantlySupervisedDatasets.py  \
+    --selection 500 700 \
+    --output_path "data/DistantlySupervisedDatasets/ontology_v$V/$RUN_NAME/dev/" \
+    --timestamp_given \
+    --label_function $EMBEDDING_LABELING \
+    --cos_theta $COS_THETA \
+    --ontology_entities_path $ENT_PATH \
+    --ontology_relations_path $REL_PATH \
+    --entity_embedding_path $EMB_PATH
 
-wait $train_process
-wait $dev_process
-wait $test_process
+python DistantlySupervisedDatasets.py  \
+    --selection 700 900 \
+    --output_path "data/DistantlySupervisedDatasets/ontology_v$V/$RUN_NAME/test/" \
+    --timestamp_given \
+    --label_function $EMBEDDING_LABELING \
+    --cos_theta $COS_THETA \
+    --ontology_entities_path $ENT_PATH \
+    --ontology_relations_path $REL_PATH \
+    --entity_embedding_path $EMB_PATH
+
 cp -r data/DistantlySupervisedDatasets/ $HOME/distantly-supervised-dataset/data/
