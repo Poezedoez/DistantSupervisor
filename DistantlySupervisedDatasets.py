@@ -341,8 +341,7 @@ class DistantlySupervisedDatasets:
 
         self.index_to_string = index_to_string
 
-
-if __name__ == "__main__":
+def get_parser():
     parser = argparse.ArgumentParser(description='Create a distantly supervised dataset of scientific documents')
     parser.add_argument('--ontology_entities_path', type=str, default="data/ontology/ontology_entities.csv",
                         help="path to the ontology entities file")
@@ -359,7 +358,11 @@ if __name__ == "__main__":
                         help="0 = string, 1 = embedding, 2 = string + embedding")
     parser.add_argument('--timestamp_given', default=False, action="store_true")
     parser.add_argument('--cos_theta', type=float, default=0.83,
-                        help="similarity threshold for embedding based labeling")
+                        help="similarity threshold for embedding based labeling")    
+    return parser    
+
+if __name__ == "__main__":
+    parser = get_parser()
     args = parser.parse_args()
     dataset = DistantlySupervisedDatasets(args.ontology_entities_path, args.ontology_relations_path, args.document_path,
                                          args.entity_embedding_path, args.output_path, args.timestamp_given, args.cos_theta)
