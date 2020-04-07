@@ -13,7 +13,7 @@ import shutil
 from sklearn.metrics.pairwise import cosine_similarity
 from outputs import print_dataset, print_statistics
 from read import read_ontology_entities, read_ontology_relations, read_types
-from utils import glue_subtokens
+from utils import glue_subtokens, create_dir
 import pandas as pd
 import copy
 
@@ -46,10 +46,10 @@ class DistantlySupervisedDatasets:
 
     def __init__(
             self,
-            ontology_entities_path="data/ontology_entities.csv",
-            ontology_relations_path="data/ontology_relations.csv",
+            ontology_entities_path="data/ontology/ontology_entities.csv",
+            ontology_relations_path="data/ontology/ontology_relations.csv",
             document_path="data/ScientificDocuments/",
-            entity_embedding_path="data/entity_embeddings.json",
+            entity_embedding_path="data/ontology/entity_embeddings.json",
             output_path="data/DistantlySupervisedDatasets/",
             timestamp_given=False,
             cos_theta=0.83
@@ -72,6 +72,7 @@ class DistantlySupervisedDatasets:
         self.label_statistics, self.global_statistics = self._prepare_statistics()
 
     def create(self, label_function=0, selection=None):
+        print("Number of processors available to use:", len(os.sched_getaffinity(0)))
         if label_function > 0:
             self._load_type_arrays()
         start_time = time.time()
@@ -85,8 +86,7 @@ class DistantlySupervisedDatasets:
         # Save datasets of different labeling functions
         for label_function, dataset in self.datasets.items():
             dataset_path = self.output_path + '{}/dataset.json'.format(label_function)
-            directory = os.path.dirname(dataset_path)
-            Path(directory).mkdir(parents=True, exist_ok=True)
+            create_dir(dataset_path)
             with open(dataset_path, 'w', encoding='utf-8') as json_file:
                 json.dump(dataset, json_file)
 
@@ -132,7 +132,6 @@ class DistantlySupervisedDatasets:
         path = self.document_path
         self.flist = os.listdir(path) if not selection else os.listdir(path)[selection[0]:selection[1]]
         for folder in self.flist:
-            print(folder)
             text_path = glob.glob(path + "{}/representations/".format(folder) + "text_sentences|*.tokens")[0]
             with open(text_path, 'r', encoding='utf-8') as text_json:
                 text = json.load(text_json)
@@ -326,6 +325,7 @@ class DistantlySupervisedDatasets:
                 entity_embeddings = json.load(json_file)
         else:
             entity_embeddings = _calculate_entity_embeddings()
+            create_dir(self.entity_embedding_path)
             with open(self.entity_embedding_path, 'w', encoding='utf-8') as json_file:
                 json.dump(entity_embeddings, json_file)
 
@@ -343,14 +343,14 @@ class DistantlySupervisedDatasets:
 
 def get_parser():
     parser = argparse.ArgumentParser(description='Create a distantly supervised dataset of scientific documents')
-    parser.add_argument('--ontology_entities_path', type=str, default="data/ontology_entities.csv",
+    parser.add_argument('--ontology_entities_path', type=str, default="data/ontology/ontology_entities.csv",
                         help="path to the ontology entities file")
-    parser.add_argument('--ontology_relations_path', type=str, default="data/ontology_relations.csv",
+    parser.add_argument('--ontology_relations_path', type=str, default="data/ontology/ontology_relations.csv",
                         help="path to the ontology relations file")
     parser.add_argument('--document_path', type=str, help='path to the folder containing scientific documents',
                         default="data/ScientificDocuments/")
     parser.add_argument('--output_path', type=str, default="data/DistantlySupervisedDatasets/", help="output path")
-    parser.add_argument('--entity_embedding_path', type=str, default="data/entity_embeddings.json",
+    parser.add_argument('--entity_embedding_path', type=str, default="data/ontology/entity_embeddings.json",
                         help="path to file of precalculated lexical embeddings of the entities")
     parser.add_argument('--selection', type=int, nargs=2, default=None,
                         help="start and end of file range for train/test split")

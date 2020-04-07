@@ -98,6 +98,10 @@ def glue_subtokens(subtokens):
 
     return glued_tokens, tok2glued, glued2tok
 
+def create_dir(path):
+    directory = os.path.dirname(path)
+    Path(directory).mkdir(parents=True, exist_ok=True)
+
     
 if __name__ == '__main__':
     d1 = {}

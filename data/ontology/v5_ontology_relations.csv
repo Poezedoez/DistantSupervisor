@@ -1,0 +1,8 @@
+OntologyID,head,relation,tail,symmetric
+REL_0001,dataset,hasMetric,metric,false
+REL_0002,machine_learning_algorithm,trainedWith,hardware,false
+REL_0003,machine_learning_algorithm,hasProperty,architectural_element,false
+REL_0004,machine_learning_algorithm,builtWith,software_framework,false
+REL_0005,machine_learning_algorithm,usedFor,application_area,false
+REL_0005,technique,usedFor,machine_learning_algorithm,false
+REL_0006,machine_learning_algorithm,scoresOn,dataset,false
