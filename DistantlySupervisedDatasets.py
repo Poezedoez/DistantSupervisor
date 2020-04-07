@@ -12,7 +12,7 @@ import csv
 import shutil
 from sklearn.metrics.pairwise import cosine_similarity
 from outputs import print_dataset, print_statistics
-from read import read_ontology_entities, read_ontology_relations, read_types
+from read import read_ontology_entities, read_ontology_relations, read_ontology_types
 from utils import glue_subtokens, create_dir
 import pandas as pd
 import copy
@@ -57,7 +57,7 @@ class DistantlySupervisedDatasets:
 
         self.ontology_entities = read_ontology_entities(ontology_entities_path)
         self.ontology_relations = read_ontology_relations(ontology_relations_path)
-        self.types = read_types(ontology_entities_path, ontology_relations_path)
+        self.types = read_ontology_types(ontology_entities_path, ontology_relations_path)
         self.embedder = BertEmbedder('data/scibert_scivocab_cased')
         self.timestamp = '' if timestamp_given else time.strftime("%Y%m%d-%H%M%S")+'/'
         self.document_path = document_path

@@ -27,7 +27,7 @@ def read_ontology_relations(path):
 
     return ontology_relations
 
-def read_types(ontology_path, relations_path):
+def read_ontology_types(ontology_path, relations_path):
     types = {}
     entities_df = pd.read_csv(ontology_path)
     relations_df = pd.read_csv(relations_path)
