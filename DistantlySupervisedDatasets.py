@@ -55,6 +55,8 @@ class DistantlySupervisedDatasets:
             cos_theta=0.83
     ):
 
+        self.ontology_entities_path = ontology_entities_path
+        self.ontology_relations_path = ontology_relations_path
         self.ontology_entities = read_ontology_entities(ontology_entities_path)
         self.ontology_relations = read_ontology_relations(ontology_relations_path)
         self.types = read_ontology_types(ontology_entities_path, ontology_relations_path)
@@ -76,6 +78,7 @@ class DistantlySupervisedDatasets:
         if label_function > 0:
             self._load_type_arrays(selection)
         start_time = time.time()
+        print("Creating dataset...")
         for sentence_subtokens, sentence_embeddings in self._iter_sentences(selection):
             self._label_sentence(sentence_subtokens, sentence_embeddings, label_function)
         end_time = time.time()
@@ -105,12 +108,12 @@ class DistantlySupervisedDatasets:
             print_dataset(dataset_path, self.output_path+'{}/classified_examples.txt'.format(label_function))
 
         # Save ontology used
-        shutil.copyfile(args.ontology_entities_path, self.output_path + 'ontology_entities.csv')
-        shutil.copyfile(args.ontology_relations_path, self.output_path + 'ontology_relations.csv')
+        shutil.copyfile(self.ontology_entities_path, self.output_path + 'ontology_entities.csv')
+        shutil.copyfile(self.ontology_relations_path, self.output_path + 'ontology_relations.csv')
 
         # Save used lexical ontology embeddings
         if os.path.exists(self.entity_embedding_path):
-            shutil.copyfile(args.entity_embedding_path, self.output_path + 'entity_embeddings.json')
+            shutil.copyfile(self.entity_embedding_path, self.output_path + 'entity_embeddings.json')
 
         # Save ontology types
         with open(self.output_path+'ontology_types.json', 'w', encoding='utf-8') as json_file:
@@ -122,6 +125,8 @@ class DistantlySupervisedDatasets:
                 txt_file.write("{} \n".format(file))
 
     def _iter_sentences(self, selection=None, includes_special_tokens=True):
+        selected_documents = '{} to {}'.format(selection[0], selection[1]) if selection else 'all'
+        print("Iterating over document range: {}".format(selected_documents))
         for document_sentences, document_embeddings in self._read_documents(selection):
             extra = 1 if includes_special_tokens else 0
             offset = 0
@@ -199,7 +204,7 @@ class DistantlySupervisedDatasets:
 
             # last token of the sentence is entity
             if score > threshold:
-                matches[type_].append((start, token_pointer+1))
+                matches[type_].append((start, i+1))
 
         return matches
 
@@ -273,6 +278,10 @@ class DistantlySupervisedDatasets:
                              "relations": relations, "orig_id": hash_string}
         self.datasets[label_function].append(training_instance)
 
+        # sanity check
+        for entity in entities:
+            print(tokens[entity["start"]:entity["end"]])
+
     def _log_statistics(self, tokens, entities, relations, label_function):
         # Log entity statistics
         self.label_statistics[label_function]["tokens_total"] += len(tokens)
@@ -298,6 +307,7 @@ class DistantlySupervisedDatasets:
     def _load_type_arrays(self, selection):
         def _calculate_entity_embeddings(selection):
             # Sum all entity instances
+            print("Calculating ontology entity embeddings...")
             entity_embeddings = {type_: defaultdict(lambda: np.zeros(768)) for type_ in self.ontology_entities}
             entity_counter = {type_: Counter() for type_ in self.ontology_entities.keys()}
             for sentence_subtokens, sentence_embeddings in self._iter_sentences(selection=selection):

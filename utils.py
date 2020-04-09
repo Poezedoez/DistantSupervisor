@@ -110,3 +110,14 @@ if __name__ == '__main__':
     d2['banana'] = [3, (6, 9), (4, 5)]
     d2['monkey'] = [2, 6]
     print(merge_list_dicts(d1, d2))
+
+def index2char(tokens):
+    char_tuples = []
+    start = 0
+    end = 0
+    for token in tokens:
+        end = start+len(token)
+        char_tuples.append((start, end))
+        start += len(token)+1
+
+    return char_tuples  
