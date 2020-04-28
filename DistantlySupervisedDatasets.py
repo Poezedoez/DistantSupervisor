@@ -12,7 +12,7 @@ import csv
 import shutil
 from sklearn.metrics.pairwise import cosine_similarity
 from outputs import print_dataset, print_statistics
-from read import read_ontology_entities, read_ontology_relations, read_types
+from read import read_ontology_entities, read_ontology_relations, read_ontology_types
 from utils import glue_subtokens, create_dir
 import pandas as pd
 import copy
@@ -21,26 +21,30 @@ import copy
 class DistantlySupervisedDatasets:
     """
     Args:
-        ontology_path (str): path to the ontology in json format
-        document_path (str): path to the parent folder of scientific documents containing
-            subfolders named with document id's
+        ontology_entities_path (str): path to the ontology entities csv file
+        ontology_relations_path (str): path to the ontology relations csv file
+        data_path (str): path to the folder of scientific documents containing
+            named with document id's
         entity_embedding_path (str): path to the precalculated entity embeddings of the ontology
         output_path (str): path to store results
         timestamp_given (bool): whether a time stamp is included in the output path
+        cos_theta (float): similarity threshold for embedding labeling
 
     Attr:
         ontology (dict): ontology loaded with json from the given path
         embedder (Embedder): embedder used for tokenization and obtaining embeddings
         timestamp (str): string containing object creation time
-        document_path (str): stored document path from init argument
+        data_path (str): stored document path from init argument
         entity_embedding_path (str): stored entity embedding path from init argument
         output_path (str): stored output path from init argument
         label_statistics (dict): dict to store statistics per label function
         global_statistics (dict): dict to store shared statistics between different label functions
-        type_arrays (dict): dict of instance embeddings stacked for one class
+        type_arrays (dict): dict of instance embeddings stacked for one entity type
         flist (list): list of files used
         label_function_names (dict): mapping of label function (int) to its name (str)
         datasets (dict): list of annotated sentence datapoints
+        label_statistics (dict): statistics per labeling function
+        global_statistics (list): globally shared statistics
         
     """
 
@@ -48,34 +52,37 @@ class DistantlySupervisedDatasets:
             self,
             ontology_entities_path="data/ontology/ontology_entities.csv",
             ontology_relations_path="data/ontology/ontology_relations.csv",
-            document_path="data/ScientificDocuments/",
+            data_path="data/ScientificDocuments/",
             entity_embedding_path="data/ontology/entity_embeddings.json",
             output_path="data/DistantlySupervisedDatasets/",
             timestamp_given=False,
             cos_theta=0.83
     ):
 
+        self.ontology_entities_path = ontology_entities_path
+        self.ontology_relations_path = ontology_relations_path
         self.ontology_entities = read_ontology_entities(ontology_entities_path)
         self.ontology_relations = read_ontology_relations(ontology_relations_path)
-        self.types = read_types(ontology_entities_path, ontology_relations_path)
+        self.types = read_ontology_types(ontology_entities_path, ontology_relations_path)
         self.embedder = BertEmbedder('data/scibert_scivocab_cased')
         self.timestamp = '' if timestamp_given else time.strftime("%Y%m%d-%H%M%S")+'/'
-        self.document_path = document_path
+        self.data_path = data_path
         self.entity_embedding_path = entity_embedding_path
+        self.entity_embeddings = None
         self.output_path = output_path + self.timestamp
         self.cos_theta = cos_theta
         self.type_arrays = {}
-        self.index_to_string = {}
         self.flist = []
         self.label_function_names = {0: "string_labeling", 1: "embedding_labeling", 2: "combined_labeling"}
         self.datasets = {"string_labeling": [], "embedding_labeling": [], "combined_labeling": []}
         self.label_statistics, self.global_statistics = self._prepare_statistics()
 
     def create(self, label_function=0, selection=None):
-        print("Number of processors available to use:", len(os.sched_getaffinity(0)))
+        # print("Number of processors available to use:", len(os.sched_getaffinity(0)))
         if label_function > 0:
-            self._load_type_arrays()
+            self._load_type_arrays(selection)
         start_time = time.time()
+        print("Creating dataset...")
         for sentence_subtokens, sentence_embeddings in self._iter_sentences(selection):
             self._label_sentence(sentence_subtokens, sentence_embeddings, label_function)
         end_time = time.time()
@@ -85,6 +92,8 @@ class DistantlySupervisedDatasets:
     def _save(self):       
         # Save datasets of different labeling functions
         for label_function, dataset in self.datasets.items():
+            if self.label_statistics[label_function]["skip"]: # skip empty dataset
+                continue
             dataset_path = self.output_path + '{}/dataset.json'.format(label_function)
             create_dir(dataset_path)
             with open(dataset_path, 'w', encoding='utf-8') as json_file:
@@ -103,12 +112,16 @@ class DistantlySupervisedDatasets:
             print_dataset(dataset_path, self.output_path+'{}/classified_examples.txt'.format(label_function))
 
         # Save ontology used
-        shutil.copyfile(args.ontology_entities_path, self.output_path + 'ontology_entities.csv')
-        shutil.copyfile(args.ontology_relations_path, self.output_path + 'ontology_relations.csv')
+        shutil.copyfile(self.ontology_entities_path, self.output_path + 'ontology_entities.csv')
+        shutil.copyfile(self.ontology_relations_path, self.output_path + 'ontology_relations.csv')
 
         # Save used lexical ontology embeddings
+        output_path = self.output_path + 'entity_embeddings.json'
+        create_dir(output_path)
+        with open(output_path, 'w', encoding='utf-8') as json_file:
+            json.dump(self.entity_embeddings, json_file)
         if os.path.exists(self.entity_embedding_path):
-            shutil.copyfile(args.ontology_entities_path, self.output_path + 'entity_embeddings.json')
+            shutil.copyfile(self.entity_embedding_path, self.output_path + 'entity_embeddings.json')
 
         # Save ontology types
         with open(self.output_path+'ontology_types.json', 'w', encoding='utf-8') as json_file:
@@ -120,6 +133,8 @@ class DistantlySupervisedDatasets:
                 txt_file.write("{} \n".format(file))
 
     def _iter_sentences(self, selection=None, includes_special_tokens=True):
+        selected_documents = '{} to {}'.format(selection[0], selection[1]) if selection else 'all'
+        print("Iterating over document range: {}".format(selected_documents))
         for document_sentences, document_embeddings in self._read_documents(selection):
             extra = 1 if includes_special_tokens else 0
             offset = 0
@@ -129,7 +144,7 @@ class DistantlySupervisedDatasets:
                 offset += len(sentence)
 
     def _read_documents(self, selection=None):
-        path = self.document_path
+        path = self.data_path
         self.flist = os.listdir(path) if not selection else os.listdir(path)[selection[0]:selection[1]]
         for folder in self.flist:
             text_path = glob.glob(path + "{}/representations/".format(folder) + "text_sentences|*.tokens")[0]
@@ -145,7 +160,7 @@ class DistantlySupervisedDatasets:
         label_statistics = {"relations": Counter(), "relations_total": 0,
                     "entities": {type_: Counter() for type_ in self.ontology_entities},
                     "entity_sentences": 0, "entities_total": 0, "tokens_total": 0,
-                    "relation_candidates": 0}
+                    "relation_candidates": 0, "skip":True}
         global_statistics = {}
         global_statistics["sentences_processed"] = 0
         global_statistics["cos_theta"] = self.cos_theta
@@ -197,7 +212,7 @@ class DistantlySupervisedDatasets:
 
             # last token of the sentence is entity
             if score > threshold:
-                matches[type_].append((start, token_pointer+1))
+                matches[type_].append((start, i+1))
 
         return matches
 
@@ -257,7 +272,7 @@ class DistantlySupervisedDatasets:
         self.global_statistics["sentences_processed"] += 1
         if not string_entities and label_function != 1: # use all sentences with at least one string match
             return
-
+        
         self._add_training_instance(glued_tokens, string_entities, string_relations, "string_labeling")
         self._add_training_instance(glued_tokens, embedding_entities, embedding_relations, "embedding_labeling")
         self._add_training_instance(glued_tokens, combined_entities, combined_relations, "combined_labeling")
@@ -276,6 +291,7 @@ class DistantlySupervisedDatasets:
         self.label_statistics[label_function]["tokens_total"] += len(tokens)
         self.label_statistics[label_function]["entities_total"] += len(entities)
         if entities:
+            self.label_statistics[label_function]["skip"] = False
             self.label_statistics[label_function]["entity_sentences"] += 1
             for entity in entities:
                 start, end = entity["start"], entity["end"]
@@ -292,12 +308,13 @@ class DistantlySupervisedDatasets:
             for relation in relations:
                 self.label_statistics[label_function]["relations"][relation["type"]] += 1
 
-    def _load_type_arrays(self):
-        def _calculate_entity_embeddings():
+    def _load_type_arrays(self, selection):
+        def _calculate_entity_embeddings(selection):
             # Sum all entity instances
+            print("Calculating ontology entity embeddings...")
             entity_embeddings = {type_: defaultdict(lambda: np.zeros(768)) for type_ in self.ontology_entities}
             entity_counter = {type_: Counter() for type_ in self.ontology_entities.keys()}
-            for sentence_subtokens, sentence_embeddings in self._iter_sentences(selection=args.selection):
+            for sentence_subtokens, sentence_embeddings in self._iter_sentences(selection=selection):
                 glued_tokens, _, glued2tok = glue_subtokens(sentence_subtokens)
                 string_matches = self._string_match(glued_tokens)
                 for type_, positions in string_matches.items():
@@ -320,26 +337,23 @@ class DistantlySupervisedDatasets:
 
             return entity_embeddings
 
+        # Either load or calculate entity embeddings
         if os.path.isfile(self.entity_embedding_path):
             with open(self.entity_embedding_path, 'r', encoding='utf-8') as json_file:
-                entity_embeddings = json.load(json_file)
+                self.entity_embeddings = json.load(json_file)
         else:
-            entity_embeddings = _calculate_entity_embeddings()
-            create_dir(self.entity_embedding_path)
-            with open(self.entity_embedding_path, 'w', encoding='utf-8') as json_file:
-                json.dump(entity_embeddings, json_file)
+            self.entity_embeddings = _calculate_entity_embeddings(selection)
 
-        index_to_string = {type_: {} for type_ in entity_embeddings}
-        for type_ in entity_embeddings:
+        # Put all entity embeddings with the same type into one numpy array
+        index_to_string = {type_: {} for type_ in self.entity_embeddings}
+        for type_ in self.entity_embeddings:
             embeddings = []
-            for instance in entity_embeddings[type_]:
+            for instance in self.entity_embeddings[type_]:
                 index_to_string[type_][len(embeddings)] = instance
-                embeddings.append(entity_embeddings[type_][instance])
+                embeddings.append(self.entity_embeddings[type_][instance])
             embeddings = [np.zeros(768)] if not embeddings else embeddings
             type_array = np.stack(embeddings)
             self.type_arrays[type_] = type_array
-
-        self.index_to_string = index_to_string
 
 def get_parser():
     parser = argparse.ArgumentParser(description='Create a distantly supervised dataset of scientific documents')
@@ -347,8 +361,8 @@ def get_parser():
                         help="path to the ontology entities file")
     parser.add_argument('--ontology_relations_path', type=str, default="data/ontology/ontology_relations.csv",
                         help="path to the ontology relations file")
-    parser.add_argument('--document_path', type=str, help='path to the folder containing scientific documents',
-                        default="data/ScientificDocuments/")
+    parser.add_argument('--data_path', type=str, default="data/ScientificDocuments/",
+                        help='path to the folder containing scientific documents/zeta objects')
     parser.add_argument('--output_path', type=str, default="data/DistantlySupervisedDatasets/", help="output path")
     parser.add_argument('--entity_embedding_path', type=str, default="data/ontology/entity_embeddings.json",
                         help="path to file of precalculated lexical embeddings of the entities")
@@ -364,6 +378,6 @@ def get_parser():
 if __name__ == "__main__":
     parser = get_parser()
     args = parser.parse_args()
-    dataset = DistantlySupervisedDatasets(args.ontology_entities_path, args.ontology_relations_path, args.document_path,
+    dataset = DistantlySupervisedDatasets(args.ontology_entities_path, args.ontology_relations_path, args.data_path,
                                          args.entity_embedding_path, args.output_path, args.timestamp_given, args.cos_theta)
     dataset.create(label_function=args.label_function, selection=tuple(args.selection))
