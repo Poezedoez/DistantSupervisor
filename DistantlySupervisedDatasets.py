@@ -79,6 +79,7 @@ class DistantlySupervisedDatasets:
         self.label_function_names = {0: "string_labeling", 1: "embedding_labeling", 2: "combined_labeling"}
         self.datasets = {"string_labeling": [], "embedding_labeling": [], "combined_labeling": []}
         self.label_statistics, self.global_statistics = self._prepare_statistics()
+        nltk.download("averaged_perceptron_tagger")
 
     def create(self, label_function=0, selection=None):
         # print("Number of processors available to use:", len(os.sched_getaffinity(0)))
