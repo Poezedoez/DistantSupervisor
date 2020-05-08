@@ -19,9 +19,9 @@ cp -r $HOME/distantly-supervised-dataset/ $TMPDIR
 cd $TMPDIR/distantly-supervised-dataset
 
 RUN_NAME="`date +%d_%m_%Y_%H_%M_%S`";
-COS_THETA=0.83
+COS_THETA=0.77
 COMBINED_LABELING=2
-V=5
+V=4
 ENT_PATH="data/ontology/v${V}_ontology_entities.csv" 
 REL_PATH="data/ontology/v${V}_ontology_relations.csv" 
 EMB_PATH="data/ontology/v${V}_entity_embeddings.json"
