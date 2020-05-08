@@ -6,6 +6,9 @@ import os
 from pathlib import Path
 import math
 from tqdm import tqdm
+import nltk
+from nltk.util import ngrams
+from nltk.translate.ribes_score import position_of_ngram
 
 
 # Knuth-Morris-Pratt string matching
@@ -102,14 +105,6 @@ def create_dir(path):
     directory = os.path.dirname(path)
     Path(directory).mkdir(parents=True, exist_ok=True)
 
-    
-if __name__ == '__main__':
-    d1 = {}
-    d2 = {}
-    d1['banana'] = [1, 4, (6, 9)]
-    d2['banana'] = [3, (6, 9), (4, 5)]
-    d2['monkey'] = [2, 6]
-    print(merge_list_dicts(d1, d2))
 
 def index2char(tokens):
     char_tuples = []
@@ -121,3 +116,29 @@ def index2char(tokens):
         start += len(token)+1
 
     return char_tuples  
+
+
+def check_nones(l):
+    no_nones = True
+    for item in l:
+        if item==None:
+            no_nones = False
+    
+    return no_nones
+
+def positions_of_ngram(ngram, sentence):
+    positions = []
+    for i, sublist in enumerate(ngrams(sentence, len(ngram))):
+        if ngram == sublist:
+            positions.append(i)
+
+    return positions
+    
+if __name__ == '__main__':
+    d1 = {}
+    d2 = {}
+    d1['banana'] = [1, 4, (6, 9)]
+    d2['banana'] = [3, (6, 9), (4, 5)]
+    d2['monkey'] = [2, 6]
+    print(merge_list_dicts(d1, d2))
+

@@ -14,6 +14,9 @@ from sklearn.metrics.pairwise import cosine_similarity
 from outputs import print_dataset, print_statistics
 from read import read_ontology_entities, read_ontology_relations, read_ontology_types
 from utils import glue_subtokens, create_dir
+import nltk
+from nltk.translate.ribes_score import position_of_ngram
+
 import pandas as pd
 import copy
 
@@ -167,6 +170,32 @@ class DistantlySupervisedDatasets:
 
         return {dataset: copy.deepcopy(label_statistics) for dataset in self.datasets}, global_statistics
 
+    def _noun_phrases(self, tokens):
+        grammar = r"""
+        NALL: {<NN>*<NNS>*<NNP>*<NNPS>*}
+        NP: {<JJ>*<NALL>+}  
+
+        """
+
+        cp = nltk.RegexpParser(grammar)
+        result = cp.parse(nltk.pos_tag(tokens))
+        noun_phrases = []
+        for subtree in result.subtrees(filter=lambda t: t.label() == 'NP'):
+            np = ''
+            for x in subtree.leaves():
+                np = np + ' ' + x[0]
+            noun_phrases.append(np.strip())
+
+        spans = []
+        for np in noun_phrases:
+            splitted_np = np.split()
+            start = position_of_ngram(tuple(splitted_np), tokens)
+            end = start+len(splitted_np)
+            spans.append((start, end))
+
+        return noun_phrases, spans
+
+
     def _string_match(self, tokens, execute=True):
         matches = {type_: [] for type_ in self.ontology_entities}
         if not execute:
@@ -181,38 +210,35 @@ class DistantlySupervisedDatasets:
 
         return matches
 
-    def _embedding_match(self, sentence_embeddings, glued2tok, glued_tokens, execute=True, threshold=0.80):
+    def _embedding_match(self, sentence_embeddings, sentence_subtokens, glued2tok, glued_tokens, execute=True, threshold=0.75):
         matches = {type_: [] for type_ in self.ontology_entities}
         if not execute:
             return matches
+
+        # Get embeddings of noun phrase chunks
+        nps, nps_spans = self._noun_phrases(glued_tokens)
+        nps_embeddings = []
+        for np_start, np_end in nps_spans:
+            emb_positions = glued2tok[np_start:np_end+1]
+            if len(emb_positions) == 1:  # last token in sentence
+                emb_positions.append(emb_positions[-1]+1)
+            emb_start, emb_end = emb_positions[0], emb_positions[-1]
+            np_embedding = np.mean(sentence_embeddings[emb_start:emb_end], axis=0)
+            nps_embeddings.append(np_embedding)
+        if not nps_embeddings:
+            return matches
+        nps_embeddings = np.stack(nps_embeddings)
+
+        # Classify noun chunks based on threshold with ontology concepts
         for type_ in self.type_arrays:
             prev_entity = False
             start = 0
-            similarities = cosine_similarity(sentence_embeddings, self.type_arrays[type_])
+            similarities = cosine_similarity(nps_embeddings, self.type_arrays[type_])
             max_similarities = similarities.max(axis=1)
-            score = 0
-            for i, token_pointer in enumerate(glued2tok):
-                score = max_similarities[token_pointer]
-                if score > threshold and not prev_entity:
-                    start = i
-                    prev_entity = True
-                    continue
-
-                # entity span continues
-                elif score > threshold and prev_entity:
-                    prev_entity = True
-                    continue
-
-                # entity span ends
-                elif prev_entity:
-                    matches[type_].append((start, i))
-
-                start = i
-                prev_entity = False
-
-            # last token of the sentence is entity
-            if score > threshold:
-                matches[type_].append((start, i+1))
+            for i, span in enumerate(nps_spans):
+                if max_similarities[i] > threshold:
+                    # print(nps[i], "%0.2f"%max_similarities[i])
+                    matches[type_].append(span)
 
         return matches
 
@@ -258,7 +284,7 @@ class DistantlySupervisedDatasets:
 
         # Find embedding entity matches
         do_embedding_matching = (label_function == 1 or label_function == 2)
-        embedding_matches = self._embedding_match(sentence_embeddings, glued2tok, glued_tokens,
+        embedding_matches = self._embedding_match(sentence_embeddings, sentence_subtokens, glued2tok, glued_tokens,
             do_embedding_matching, threshold=self.cos_theta)
         embedding_entities = label_entities(embedding_matches)
         embedding_relations = label_relations(embedding_entities)
