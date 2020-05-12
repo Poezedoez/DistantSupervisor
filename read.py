@@ -47,7 +47,7 @@ def read_ontology_types(ontology_path, relations_path):
     return types
 
 
-def iter_sentences(data, selection=None, includes_special_tokens=True):
+def iter_sentences(data, selection=None, includes_special_tokens=True, filter_sentences=True):
 
     selected_documents = '{} to {}'.format(selection[0], selection[1]) if selection else 'all'
     print("Iterating over document range: {}".format(selected_documents))
@@ -59,7 +59,7 @@ def iter_sentences(data, selection=None, includes_special_tokens=True):
             subtokens_length = len(sentence) - (2 * extra)
             subtokens = sentence[extra:-extra]
             embeddings = document_embeddings[offset+extra:offset+extra+subtokens_length]
-            if proper_sentence(subtokens):
+            if proper_sentence(subtokens) or not filter_sentences:
                 yield subtokens, embeddings, doc_name
             else:
                 glued_tokens, _, _ = glue_subtokens(subtokens)

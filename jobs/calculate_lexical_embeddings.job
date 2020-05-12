@@ -18,14 +18,31 @@ source activate lisaenv
 cp -r $HOME/distantly-supervised-dataset/ $TMPDIR
 cd $TMPDIR/distantly-supervised-dataset
 
-RUN_NAME="`date +%d_%m_%Y_%H_%M_%S`";
 COS_THETA=0.83
 COMBINED_LABELING=2
-V=5
+V=4
 ENT_PATH="data/ontology/v${V}_ontology_entities.csv" 
 REL_PATH="data/ontology/v${V}_ontology_relations.csv" 
 EMB_PATH="data/ontology/v${V}_entity_embeddings.json"
 
+RUN_NAME="absmax_unfiltered_`date +%d_%m_%Y_%H_%M_%S`";
+REDUCE="abs_max"
+python DistantlySupervisedDatasets.py  \
+    --selection 0 500 \
+    --output_path "data/DistantlySupervisedDatasets/ontology_v$V/$RUN_NAME/train/" \
+    --timestamp_given \
+    --label_function $COMBINED_LABELING \
+    --cos_theta $COS_THETA \
+    --ontology_entities_path $ENT_PATH \
+    --ontology_relations_path $REL_PATH \
+    --entity_embedding_path $EMB_PATH \
+    --f_reduce $REDUCE
+    
+
+cp $EMB_PATH $HOME/distantly-supervised-dataset/data
+
+RUN_NAME="absmax_filtered_`date +%d_%m_%Y_%H_%M_%S`";
+REDUCE="abs_max"
 python DistantlySupervisedDatasets.py  \
     --selection 0 500 \
     --output_path "data/DistantlySupervisedDatasets/ontology_v$V/$RUN_NAME/train/" \
@@ -35,5 +52,38 @@ python DistantlySupervisedDatasets.py  \
     --ontology_entities_path $ENT_PATH \
     --ontology_relations_path $REL_PATH \
     --entity_embedding_path $EMB_PATH
+    --f_reduce $REDUCE \
+    --filter_sentences 
+
+
+RUN_NAME="mean_unfiltered_`date +%d_%m_%Y_%H_%M_%S`";
+REDUCE="mean"
+python DistantlySupervisedDatasets.py  \
+    --selection 0 500 \
+    --output_path "data/DistantlySupervisedDatasets/ontology_v$V/$RUN_NAME/train/" \
+    --timestamp_given \
+    --label_function $COMBINED_LABELING \
+    --cos_theta $COS_THETA \
+    --ontology_entities_path $ENT_PATH \
+    --ontology_relations_path $REL_PATH \
+    --entity_embedding_path $EMB_PATH \
+    --f_reduce $REDUCE
+    
+
+cp $EMB_PATH $HOME/distantly-supervised-dataset/data
+
+RUN_NAME="mean_filtered_`date +%d_%m_%Y_%H_%M_%S`";
+REDUCE="mean"
+python DistantlySupervisedDatasets.py  \
+    --selection 0 500 \
+    --output_path "data/DistantlySupervisedDatasets/ontology_v$V/$RUN_NAME/train/" \
+    --timestamp_given \
+    --label_function $COMBINED_LABELING \
+    --cos_theta $COS_THETA \
+    --ontology_entities_path $ENT_PATH \
+    --ontology_relations_path $REL_PATH \
+    --entity_embedding_path $EMB_PATH
+    --f_reduce $REDUCE \
+    --filter_sentences 
 
 cp $EMB_PATH $HOME/distantly-supervised-dataset/data

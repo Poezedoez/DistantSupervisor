@@ -57,7 +57,9 @@ class DistantlySupervisedDatasets:
             entity_embedding_path="data/ontology/entity_embeddings.json",
             output_path="data/DistantlySupervisedDatasets/",
             timestamp_given=False,
-            cos_theta=0.83
+            cos_theta=0.83,
+            filter_sentences=True,
+            f_reduce="mean"
     ):
 
         self.ontology_entities_path = ontology_entities_path
@@ -68,8 +70,11 @@ class DistantlySupervisedDatasets:
         self.embedder = BertEmbedder('data/scibert_scivocab_cased')
         self.timestamp = '' if timestamp_given else time.strftime("%Y%m%d-%H%M%S")+'/'
         self.data_path = data_path
+        self.filter_sentences = filter_sentences
         self.entity_embedding_path = entity_embedding_path
         self.entity_embeddings = None
+        self.entity_counts = None
+        self.f_reduce = f_reduce
         self.output_path = output_path + self.timestamp
         self.cos_theta = cos_theta
         self.type_arrays = {}
@@ -86,7 +91,11 @@ class DistantlySupervisedDatasets:
         start_time = time.time()
         print("Creating dataset...")
         nltk.download("averaged_perceptron_tagger")
-        for sentence_subtokens, sentence_embeddings, doc_name in iter_sentences(self.data_path, selection):
+        iterator = iter_sentences(self.data_path, 
+                                  selection=selection, 
+                                  includes_special_tokens=True, 
+                                  filter_sentences=self.filter_sentences)
+        for sentence_subtokens, sentence_embeddings, doc_name in iterator:
             self._label_sentence(sentence_subtokens, sentence_embeddings, label_function)
             self.flist.add(doc_name)
         end_time = time.time()
@@ -120,13 +129,16 @@ class DistantlySupervisedDatasets:
         shutil.copyfile(self.ontology_entities_path, self.output_path + 'ontology_entities.csv')
         shutil.copyfile(self.ontology_relations_path, self.output_path + 'ontology_relations.csv')
 
-        # Save used lexical ontology embeddings
+        # Save used lexical ontology embeddings and counts
         output_path = self.output_path + 'entity_embeddings.json'
         create_dir(output_path)
         with open(output_path, 'w', encoding='utf-8') as json_file:
             json.dump(self.entity_embeddings, json_file)
         if os.path.exists(self.entity_embedding_path):
             shutil.copyfile(self.entity_embedding_path, self.output_path + 'entity_embeddings.json')
+        output_path = self.output_path + 'entity_embedding_counts.json'
+        with open(output_path, 'w', encoding='utf-8') as json_file:
+            json.dump(self.entity_counts, json_file)
 
         # Save ontology types
         with open(self.output_path+'ontology_types.json', 'w', encoding='utf-8') as json_file:
@@ -191,7 +203,8 @@ class DistantlySupervisedDatasets:
         return matches
 
 
-    def _embedding_match(self, sentence_embeddings, sentence_subtokens, glued2tok, glued_tokens, execute=True, threshold=0.75):
+    def _embedding_match(self, sentence_embeddings, sentence_subtokens, 
+                         glued2tok, glued_tokens, execute=True, threshold=0.75, f_reduce="mean"):
         matches = {type_: [] for type_ in self.ontology_entities}
         if not execute:
             return matches
@@ -200,11 +213,12 @@ class DistantlySupervisedDatasets:
         nps, nps_spans = self._noun_phrases(glued_tokens)
         nps_embeddings = []
         for np_start, np_end in nps_spans:
-            emb_positions = glued2tok[np_start:np_end+1]
-            if len(emb_positions) == 1:  # last token in sentence
-                emb_positions.append(emb_positions[-1]+1)
-            emb_start, emb_end = emb_positions[0], emb_positions[-1]
-            np_embedding = np.mean(sentence_embeddings[emb_start:emb_end], axis=0)
+            np_embedding, _ = self.reduce_embeddings(sentence_embeddings, 
+                                                  np_start, 
+                                                  np_end, 
+                                                  glued_tokens, 
+                                                  glued2tok, 
+                                                  f_reduce)
             nps_embeddings.append(np_embedding)
         if not nps_embeddings:
             return matches
@@ -323,7 +337,7 @@ class DistantlySupervisedDatasets:
             with open(self.entity_embedding_path, 'r', encoding='utf-8') as json_file:
                 self.entity_embeddings = json.load(json_file)
         else:
-            self.entity_embeddings = self._calculate_entity_embeddings(selection)
+            self.entity_embeddings, self.entity_counts = self._calculate_entity_embeddings(selection)
 
         # Put all entity embeddings with the same type into one numpy array
         index_to_string = {type_: {} for type_ in self.entity_embeddings}
@@ -336,35 +350,69 @@ class DistantlySupervisedDatasets:
             type_array = np.stack(embeddings)
             self.type_arrays[type_] = type_array
 
+    def reduce_embeddings(self, embeddings, start, end, glued_tokens, glued2tok, f_reduce="mean"):
+        def _mean(matched_embeddings):
+            embedding = np.stack(matched_embeddings).mean(axis=0)
+            return embedding
 
-    def _calculate_entity_embeddings(self, selection):
-        # Sum all entity instances
+        def _abs_max(matched_embeddings):
+            t = torch.stack(matched_embeddings)
+            abs_max_indices = torch.abs(t).argmax(dim=0)
+            embedding = t.gather(0, abs_max_indices.view(1,-1)).squeeze()  
+            return embedding
+
+        emb_positions = glued2tok[start:end+1]
+        if len(emb_positions) == 1:  # last token in sentence
+            emb_positions.append(emb_positions[-1]+1)
+        emb_start, emb_end = emb_positions[0], emb_positions[-1]
+        reduction = {"mean":_mean, "abs_max":_abs_max}.get(f_reduce) 
+        embedding = reduction(embeddings[emb_start:emb_end])  
+        matched_glued_tokens = glued_tokens[start:end]   
+
+        return embedding, matched_glued_tokens
+
+    def _calculate_entity_embeddings(self, selection, f_reduce="mean"):
+        def _accumulate_mean(embedding, entity_embeddings, type_, matched_glued_tokens):
+            entity_embeddings[type_][" ".join(matched_glued_tokens)] += embedding
+
+        def _accumulate_absmax(embedding, entity_embeddings, type_, matched_glued_tokens):
+            ontology_embedding = entity_embeddings[type_][" ".join(matched_glued_tokens)]
+            t = torch.stack([embedding]+[ontology_embedding])
+            abs_max_indices = torch.abs(t).argmax(dim=0)
+            embedding = t.gather(0, abs_max_indices.view(1,-1)).squeeze()
+            entity_embeddings[type_][" ".join(matched_glued_tokens)] = embedding
+
         print("Calculating ontology entity embeddings...")
         entity_embeddings = {type_: defaultdict(lambda: np.zeros(self.embedder.embedding_size)) 
                              for type_ in self.ontology_entities}
         entity_counter = {type_: Counter() for type_ in self.ontology_entities.keys()}
-        for sentence_subtokens, sentence_embeddings, doc_name in iter_sentences(self.data_path, selection=selection):
+        iterator = iter_sentences(self.data_path, 
+                                  selection=selection, 
+                                  includes_special_tokens=True, 
+                                  filter_sentences=self.filter_sentences)
+        for sentence_subtokens, sentence_embeddings, doc_name in iterator:
             glued_tokens, _, glued2tok = glue_subtokens(sentence_subtokens)
             string_matches = self._string_match(glued_tokens)
             for type_, positions in string_matches.items():
-                for position in positions:
-                    start, end = position
-                    pointers = glued2tok[start:end+1]
-                    if len(pointers) == 1:  # last token in sentence
-                        pointers.append(pointers[-1]+1)
-                    matched_embeddings = sentence_embeddings[pointers[0]:pointers[-1]]
-                    matched_glued_tokens = glued_tokens[start:end]
-                    embedding = np.stack(matched_embeddings).mean(axis=0)
-                    entity_embeddings[type_][" ".join(matched_glued_tokens)] += embedding
+                for start, end in positions:
+                    embedding, matched_glued_tokens = self.reduce_embeddings(sentence_embeddings, 
+                                                                             start, 
+                                                                             end, 
+                                                                             glued_tokens, 
+                                                                             glued2tok, 
+                                                                             f_reduce)
+                    reduction = {"mean":_accumulate_mean, "abs_max":_accumulate_absmax}.get(f_reduce)
+                    reduction(embedding, entity_embeddings, type_, matched_glued_tokens)
                     entity_counter[type_][" ".join(matched_glued_tokens)] += 1
 
         # Average the sum of embeddings
-        for type_, count_dict in entity_counter.items():
-            for token, count in count_dict.items():
-                summed_embedding = entity_embeddings[type_][token]
-                entity_embeddings[type_][token] = (summed_embedding / count).tolist()
+        if f_reduce == "mean":
+            for type_, count_dict in entity_counter.items():
+                for token, count in count_dict.items():
+                    summed_embedding = entity_embeddings[type_][token]
+                    entity_embeddings[type_][token] = (summed_embedding / count).tolist()
 
-        return entity_embeddings
+        return entity_embeddings, entity_counter
 
 
 def get_parser():
@@ -385,6 +433,8 @@ def get_parser():
     parser.add_argument('--timestamp_given', default=False, action="store_true")
     parser.add_argument('--cos_theta', type=float, default=0.83,
                         help="similarity threshold for embedding based labeling")    
+    parser.add_argument('--filter_sentences', default=False, action="store_true")
+    parser.add_argument('--f_reduce', type=str, default="mean")
     return parser    
 
 
@@ -392,5 +442,6 @@ if __name__ == "__main__":
     parser = get_parser()
     args = parser.parse_args()
     dataset = DistantlySupervisedDatasets(args.ontology_entities_path, args.ontology_relations_path, args.data_path,
-                                         args.entity_embedding_path, args.output_path, args.timestamp_given, args.cos_theta)
+                                         args.entity_embedding_path, args.output_path, args.timestamp_given, args.cos_theta,
+                                         args.filter_sentences, args.f_reduce)
     dataset.create(label_function=args.label_function, selection=tuple(args.selection))
