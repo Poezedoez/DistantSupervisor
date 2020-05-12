@@ -1,7 +1,5 @@
 import json
 from embedders import BertEmbedder
-import os
-import glob
 import numpy as np
 from pathlib import Path
 import time
@@ -12,13 +10,13 @@ import csv
 import shutil
 from sklearn.metrics.pairwise import cosine_similarity
 from outputs import print_dataset, print_statistics
-from read import read_ontology_entities, read_ontology_relations, read_ontology_types
+from read import read_ontology_entities, read_ontology_relations, read_ontology_types, iter_sentences
 from utils import glue_subtokens, create_dir
 import nltk
 from nltk.translate.ribes_score import position_of_ngram
-
 import pandas as pd
 import copy
+import os
 
 
 class DistantlySupervisedDatasets:
@@ -75,11 +73,11 @@ class DistantlySupervisedDatasets:
         self.output_path = output_path + self.timestamp
         self.cos_theta = cos_theta
         self.type_arrays = {}
-        self.flist = []
+        self.flist = set()
         self.label_function_names = {0: "string_labeling", 1: "embedding_labeling", 2: "combined_labeling"}
         self.datasets = {"string_labeling": [], "embedding_labeling": [], "combined_labeling": []}
         self.label_statistics, self.global_statistics = self._prepare_statistics()
-        nltk.download("averaged_perceptron_tagger")
+        
 
     def create(self, label_function=0, selection=None):
         # print("Number of processors available to use:", len(os.sched_getaffinity(0)))
@@ -87,11 +85,14 @@ class DistantlySupervisedDatasets:
             self._load_type_arrays(selection)
         start_time = time.time()
         print("Creating dataset...")
-        for sentence_subtokens, sentence_embeddings in self._iter_sentences(selection):
+        nltk.download("averaged_perceptron_tagger")
+        for sentence_subtokens, sentence_embeddings, doc_name in iter_sentences(self.data_path, selection):
             self._label_sentence(sentence_subtokens, sentence_embeddings, label_function)
+            self.flist.add(doc_name)
         end_time = time.time()
         self.global_statistics["time_taken"] = int(end_time - start_time)
         self._save()
+
 
     def _save(self):       
         # Save datasets of different labeling functions
@@ -136,29 +137,6 @@ class DistantlySupervisedDatasets:
             for file in self.flist:
                 txt_file.write("{} \n".format(file))
 
-    def _iter_sentences(self, selection=None, includes_special_tokens=True):
-        selected_documents = '{} to {}'.format(selection[0], selection[1]) if selection else 'all'
-        print("Iterating over document range: {}".format(selected_documents))
-        for document_sentences, document_embeddings in self._read_documents(selection):
-            extra = 1 if includes_special_tokens else 0
-            offset = 0
-            for sentence in document_sentences:
-                subtokens_length = len(sentence) - (2 * extra)
-                yield sentence[extra:-extra], document_embeddings[offset+extra:offset+extra+subtokens_length]
-                offset += len(sentence)
-
-    def _read_documents(self, selection=None):
-        path = self.data_path
-        self.flist = os.listdir(path) if not selection else os.listdir(path)[selection[0]:selection[1]]
-        for folder in self.flist:
-            text_path = glob.glob(path + "{}/representations/".format(folder) + "text_sentences|*.tokens")[0]
-            with open(text_path, 'r', encoding='utf-8') as text_json:
-                text = json.load(text_json)
-            embeddings_path = glob.glob(path + "{}/representations/".format(folder) +
-                                        "text_sentences|*word_embeddings.npy")[0]
-            embeddings = np.load(embeddings_path)
-
-            yield text, embeddings
     
     def _prepare_statistics(self):
         label_statistics = {"relations": Counter(), "relations_total": 0,
@@ -170,6 +148,7 @@ class DistantlySupervisedDatasets:
         global_statistics["cos_theta"] = self.cos_theta
 
         return {dataset: copy.deepcopy(label_statistics) for dataset in self.datasets}, global_statistics
+
 
     def _noun_phrases(self, tokens):
         grammar = r"""
@@ -211,6 +190,7 @@ class DistantlySupervisedDatasets:
 
         return matches
 
+
     def _embedding_match(self, sentence_embeddings, sentence_subtokens, glued2tok, glued_tokens, execute=True, threshold=0.75):
         matches = {type_: [] for type_ in self.ontology_entities}
         if not execute:
@@ -242,6 +222,7 @@ class DistantlySupervisedDatasets:
                     matches[type_].append(span)
 
         return matches
+
 
     def _combined_match(self, string_matches, embedding_matches, execute=True):
         matches = {type_: [] for type_ in self.ontology_entities}
@@ -313,6 +294,7 @@ class DistantlySupervisedDatasets:
                              "relations": relations, "orig_id": hash_string}
         self.datasets[label_function].append(training_instance)
 
+
     def _log_statistics(self, tokens, entities, relations, label_function):
         # Log entity statistics
         self.label_statistics[label_function]["tokens_total"] += len(tokens)
@@ -336,40 +318,12 @@ class DistantlySupervisedDatasets:
                 self.label_statistics[label_function]["relations"][relation["type"]] += 1
 
     def _load_type_arrays(self, selection):
-        def _calculate_entity_embeddings(selection):
-            # Sum all entity instances
-            print("Calculating ontology entity embeddings...")
-            entity_embeddings = {type_: defaultdict(lambda: np.zeros(768)) for type_ in self.ontology_entities}
-            entity_counter = {type_: Counter() for type_ in self.ontology_entities.keys()}
-            for sentence_subtokens, sentence_embeddings in self._iter_sentences(selection=selection):
-                glued_tokens, _, glued2tok = glue_subtokens(sentence_subtokens)
-                string_matches = self._string_match(glued_tokens)
-                for type_, positions in string_matches.items():
-                    for position in positions:
-                        start, end = position
-                        pointers = glued2tok[start:end+1]
-                        if len(pointers) == 1:  # last token in sentence
-                            pointers.append(pointers[-1]+1)
-                        matched_embeddings = sentence_embeddings[pointers[0]:pointers[-1]]
-                        matched_glued_tokens = glued_tokens[start:end]
-                        embedding = np.stack(matched_embeddings).mean(axis=0)
-                        entity_embeddings[type_][" ".join(matched_glued_tokens)] += embedding
-                        entity_counter[type_][" ".join(matched_glued_tokens)] += 1
-
-            # Average the sum of embeddings
-            for type_, count_dict in entity_counter.items():
-                for token, count in count_dict.items():
-                    summed_embedding = entity_embeddings[type_][token]
-                    entity_embeddings[type_][token] = (summed_embedding / count).tolist()
-
-            return entity_embeddings
-
         # Either load or calculate entity embeddings
         if os.path.isfile(self.entity_embedding_path):
             with open(self.entity_embedding_path, 'r', encoding='utf-8') as json_file:
                 self.entity_embeddings = json.load(json_file)
         else:
-            self.entity_embeddings = _calculate_entity_embeddings(selection)
+            self.entity_embeddings = self._calculate_entity_embeddings(selection)
 
         # Put all entity embeddings with the same type into one numpy array
         index_to_string = {type_: {} for type_ in self.entity_embeddings}
@@ -378,9 +332,40 @@ class DistantlySupervisedDatasets:
             for instance in self.entity_embeddings[type_]:
                 index_to_string[type_][len(embeddings)] = instance
                 embeddings.append(self.entity_embeddings[type_][instance])
-            embeddings = [np.zeros(768)] if not embeddings else embeddings
+            embeddings = [np.zeros(self.embedder.embedding_size)] if not embeddings else embeddings
             type_array = np.stack(embeddings)
             self.type_arrays[type_] = type_array
+
+
+    def _calculate_entity_embeddings(self, selection):
+        # Sum all entity instances
+        print("Calculating ontology entity embeddings...")
+        entity_embeddings = {type_: defaultdict(lambda: np.zeros(self.embedder.embedding_size)) 
+                             for type_ in self.ontology_entities}
+        entity_counter = {type_: Counter() for type_ in self.ontology_entities.keys()}
+        for sentence_subtokens, sentence_embeddings, doc_name in iter_sentences(self.data_path, selection=selection):
+            glued_tokens, _, glued2tok = glue_subtokens(sentence_subtokens)
+            string_matches = self._string_match(glued_tokens)
+            for type_, positions in string_matches.items():
+                for position in positions:
+                    start, end = position
+                    pointers = glued2tok[start:end+1]
+                    if len(pointers) == 1:  # last token in sentence
+                        pointers.append(pointers[-1]+1)
+                    matched_embeddings = sentence_embeddings[pointers[0]:pointers[-1]]
+                    matched_glued_tokens = glued_tokens[start:end]
+                    embedding = np.stack(matched_embeddings).mean(axis=0)
+                    entity_embeddings[type_][" ".join(matched_glued_tokens)] += embedding
+                    entity_counter[type_][" ".join(matched_glued_tokens)] += 1
+
+        # Average the sum of embeddings
+        for type_, count_dict in entity_counter.items():
+            for token, count in count_dict.items():
+                summed_embedding = entity_embeddings[type_][token]
+                entity_embeddings[type_][token] = (summed_embedding / count).tolist()
+
+        return entity_embeddings
+
 
 def get_parser():
     parser = argparse.ArgumentParser(description='Create a distantly supervised dataset of scientific documents')
@@ -401,6 +386,7 @@ def get_parser():
     parser.add_argument('--cos_theta', type=float, default=0.83,
                         help="similarity threshold for embedding based labeling")    
     return parser    
+
 
 if __name__ == "__main__":
     parser = get_parser()
