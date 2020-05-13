@@ -86,20 +86,6 @@ def create_spans(sequence):
     #TODO
     pass
 
-def glue_subtokens(subtokens):
-    glued_tokens = []
-    tok2glued = []
-    glued2tok = []
-    for i, token in enumerate(subtokens):
-        if token.startswith('##'):
-            glued_tokens[len(glued_tokens) - 1] = glued_tokens[len(glued_tokens) - 1] + token.replace('##', '')
-        else:
-            glued2tok.append(i)
-            glued_tokens.append(token)
-
-        tok2glued.append(len(glued_tokens) - 1)
-
-    return glued_tokens, tok2glued, glued2tok
 
 def create_dir(path):
     directory = os.path.dirname(path)

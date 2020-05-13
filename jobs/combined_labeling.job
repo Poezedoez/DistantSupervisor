@@ -31,7 +31,7 @@ python DistantlySupervisedDatasets.py  \
     --selection 0 500 \
     --output_path "data/DistantlySupervisedDatasets/ontology_v$V/$RUN_NAME/train/" \
     --timestamp_given \
-    --label_function $COMBINED_LABELING \
+    --label_strategy $COMBINED_LABELING \
     --cos_theta $COS_THETA \
     --ontology_entities_path $ENT_PATH \
     --ontology_relations_path $REL_PATH \
@@ -41,7 +41,7 @@ python DistantlySupervisedDatasets.py  \
     --selection 500 700 \
     --output_path "data/DistantlySupervisedDatasets/ontology_v$V/$RUN_NAME/dev/" \
     --timestamp_given \
-    --label_function $COMBINED_LABELING \
+    --label_strategy $COMBINED_LABELING \
     --cos_theta $COS_THETA \
     --ontology_entities_path $ENT_PATH \
     --ontology_relations_path $REL_PATH \
@@ -51,7 +51,7 @@ python DistantlySupervisedDatasets.py  \
     --selection 700 900 \
     --output_path "data/DistantlySupervisedDatasets/ontology_v$V/$RUN_NAME/test/" \
     --timestamp_given \
-    --label_function $COMBINED_LABELING \
+    --label_strategy $COMBINED_LABELING \
     --cos_theta $COS_THETA \
     --ontology_entities_path $ENT_PATH \
     --ontology_relations_path $REL_PATH \
