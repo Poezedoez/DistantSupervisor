@@ -3,13 +3,13 @@ from embedders import BertEmbedder, glue_subtokens
 import numpy as np
 import time
 from collections import defaultdict, Counter
-import argparse
 from read import DataIterator
 from write import save_json, save_list, save_copy, print_dataset, print_statistics
 from heuristics import string_match, embedding_match, combined_match
 from Ontology import Ontology
 import nltk
 import copy
+from argparser import get_parser
 
 
 class DistantSupervisor:
@@ -58,7 +58,6 @@ class DistantSupervisor:
         self.f_reduce = f_reduce
         self.output_path = output_path + self.timestamp
         self.cos_theta = cos_theta
-        self.type_arrays = {}
         self.flist = set()
         self.label_strategies = {0: "string_labeling", 1: "embedding_labeling", 2: "combined_labeling"}
         self.datasets = {"string_labeling": [], "embedding_labeling": [], "combined_labeling": []}
@@ -82,7 +81,7 @@ class DistantSupervisor:
         # Ready ontology embeddings
         if label_strategy > 0:
             if not self.ontology.entity_embeddings:
-                self.ontology._calculate_entity_embeddings(iterator, self.embedder, self.f_reduce)
+                self.ontology.calculate_entity_embeddings(iterator, self.embedder, self.f_reduce)
             self.ontology.embeddings_to_array()
                 
         # Supervise sentences        
@@ -114,14 +113,7 @@ class DistantSupervisor:
             print_dataset(dataset_path, self.output_path+'{}/classified_examples.txt'.format(label_function))
 
         # Save ontology used
-        save_copy(self.ontology.entities_path, self.output_path + 'ontology_entities.csv')
-        save_copy(self.ontology.relations_path, self.output_path + 'ontology_relations.csv')
-
-        # Save used ontology embeddings (and counts)
-        save_json(self.ontology.entity_embeddings, self.output_path+'entity_embeddings.json')
-
-        # Save converted ontology types
-        save_json(self.ontology.types, self.output_path+'ontology_types.json')
+        self.ontology.save(self.output_path)
 
         # Save list of selected documents used for the split
         save_list(self.flist, self.output_path+'filelist.txt')
@@ -173,7 +165,8 @@ class DistantSupervisor:
         # Find embedding entity matches
         do_embedding_matching = (label_function == 1 or label_function == 2)
         embedding_matches = embedding_match(sentence_embeddings, sentence_subtokens, glued2tok, glued_tokens, 
-                                            self.ontology, self.embedder, do_embedding_matching, threshold=self.cos_theta)
+                                            self.ontology, self.embedder, do_embedding_matching, 
+                                            threshold=self.cos_theta, f_reduce=self.f_reduce)
         embedding_entities = label_entities(embedding_matches)
         embedding_relations = label_relations(embedding_entities)
 
@@ -224,33 +217,10 @@ class DistantSupervisor:
                 self.label_statistics[label_function]["relations"][relation["type"]] += 1
 
 
-def get_parser():
-    parser = argparse.ArgumentParser(description='Create a distantly supervised dataset of scientific documents')
-    parser.add_argument('--ontology_entities_path', type=str, default="data/ontology/ontology_entities.csv",
-                        help="path to the ontology entities file")
-    parser.add_argument('--ontology_relations_path', type=str, default="data/ontology/ontology_relations.csv",
-                        help="path to the ontology relations file")
-    parser.add_argument('--data_path', type=str, default="data/ScientificDocuments/",
-                        help='path to the folder containing scientific documents/zeta objects')
-    parser.add_argument('--output_path', type=str, default="data/DistantlySupervisedDatasets/", help="output path")
-    parser.add_argument('--entity_embedding_path', type=str, default="data/ontology/entity_embeddings.json",
-                        help="path to file of precalculated lexical embeddings of the entities")
-    parser.add_argument('--selection', type=int, nargs=2, default=None,
-                        help="start and end of file range for train/test split")
-    parser.add_argument('--label_strategy', type=int, default=2, choices=range(0, 3),
-                        help="0 = string, 1 = embedding, 2 = string + embedding")
-    parser.add_argument('--timestamp_given', default=False, action="store_true")
-    parser.add_argument('--cos_theta', type=float, default=0.83,
-                        help="similarity threshold for embedding based labeling")    
-    parser.add_argument('--filter_sentences', default=False, action="store_true")
-    parser.add_argument('--f_reduce', type=str, default="mean")
-    return parser    
-
-
 if __name__ == "__main__":
     parser = get_parser()
     args = parser.parse_args()
     supervisor = DistantSupervisor(args.data_path, args.ontology_entities_path, args.ontology_relations_path,
-                                          args.entity_embedding_path, args.output_path, args.timestamp_given, 
-                                          args.cos_theta, args.filter_sentences, args.f_reduce)
+                                   args.entity_embedding_path, args.output_path, args.timestamp_given, 
+                                   args.cos_theta, args.filter_sentences, args.f_reduce)
     supervisor.supervise(label_strategy=args.label_strategy, selection=tuple(args.selection))

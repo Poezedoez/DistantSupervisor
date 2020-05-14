@@ -1,7 +1,6 @@
 import json
 import argparse
 from collections import Counter, defaultdict
-from evaluate import evaluate
 import pandas as pd
 import numpy as np
 import sys

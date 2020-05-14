@@ -18,16 +18,17 @@ source activate lisaenv
 cp -r $HOME/distantly-supervised-dataset/ $TMPDIR
 cd $TMPDIR/distantly-supervised-dataset
 
-RUN_NAME="`date +%d_%m_%Y_%H_%M_%S`";
-COS_THETA=0.77
+COS_THETA=0.83
 COMBINED_LABELING=2
 V=4
 ENT_PATH="data/ontology/v${V}_ontology_entities.csv" 
-REL_PATH="data/ontology/v${V}_ontology_relations.csv" 
-EMB_PATH="data/ontology/v${V}_entity_embeddings.json"
+REL_PATH="data/ontology/v${V}_ontology_relations.csv"
+EMB_PATH="data/ontology/v${V}_entity_embeddings.json" 
+REDUCE="mean"
+DATE=`date +%d_%m_%Y_%H_%M_%S`
+RUN_NAME="${REDUCE}_filtered_$DATE";
 
-
-python DistantlySupervisedDatasets.py  \
+python DistantSupervisor.py  \
     --selection 0 500 \
     --output_path "data/DistantlySupervisedDatasets/ontology_v$V/$RUN_NAME/train/" \
     --timestamp_given \
@@ -35,9 +36,11 @@ python DistantlySupervisedDatasets.py  \
     --cos_theta $COS_THETA \
     --ontology_entities_path $ENT_PATH \
     --ontology_relations_path $REL_PATH \
-    --entity_embedding_path $EMB_PATH
+    --entity_embedding_path $EMB_PATH \
+    --f_reduce $REDUCE \
+    --filter_sentences
 
-python DistantlySupervisedDatasets.py  \
+python DistantSupervisor.py  \
     --selection 500 700 \
     --output_path "data/DistantlySupervisedDatasets/ontology_v$V/$RUN_NAME/dev/" \
     --timestamp_given \
@@ -45,9 +48,11 @@ python DistantlySupervisedDatasets.py  \
     --cos_theta $COS_THETA \
     --ontology_entities_path $ENT_PATH \
     --ontology_relations_path $REL_PATH \
-    --entity_embedding_path $EMB_PATH
+    --entity_embedding_path $EMB_PATH \
+    --f_reduce $REDUCE \
+    --filter_sentences
 
-python DistantlySupervisedDatasets.py  \
+python DistantSupervisor.py  \
     --selection 700 900 \
     --output_path "data/DistantlySupervisedDatasets/ontology_v$V/$RUN_NAME/test/" \
     --timestamp_given \
@@ -55,6 +60,8 @@ python DistantlySupervisedDatasets.py  \
     --cos_theta $COS_THETA \
     --ontology_entities_path $ENT_PATH \
     --ontology_relations_path $REL_PATH \
-    --entity_embedding_path $EMB_PATH
+    --entity_embedding_path $EMB_PATH \
+    --f_reduce $REDUCE \
+    --filter_sentences
 
 cp -r data/DistantlySupervisedDatasets/ $HOME/distantly-supervised-dataset/data/

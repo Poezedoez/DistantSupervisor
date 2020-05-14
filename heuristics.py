@@ -10,7 +10,8 @@ import re
 def noun_phrases(tokens):
     grammar = r"""
     NALL: {<NN>*<NNS>*<NNP>*<NNPS>*}
-    NP: {<JJ>*<NALL>+}  
+    NC: {<JJ>*<NALL>+}
+    NP: {<NC>+}  
 
     """
 
@@ -115,3 +116,6 @@ def combined_match(string_matches, embedding_matches, execute=True):
 
     return matches
 
+if __name__ == "__main__":
+    test = ["Multilinear", "sparse", "principal", "component", "analysis", "of", "sublinear", "rich", "data"]
+    print(noun_phrases(test)[0])
