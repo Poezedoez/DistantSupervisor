@@ -47,7 +47,6 @@ def evaluate_ontology_representations(v=4):
     data_path = "data/ScientificDocuments/"
     entities_path = "data/ontology/v{}_ontology_entities.csv".format(v)
     relations_path = "data/ontology/v{}_ontology_relations.csv".format(v)
-    output_path_embeddings = "data/ontology/"
     results_path = "data/ontology/evaluation/"
     embedder = BertEmbedder('data/scibert_scivocab_cased')
     strategies = ["absmax_filtered", "absmax_unfiltered", "max_filtered", "max_unfiltered", "mean_filtered", "mean_unfiltered"]
@@ -58,8 +57,7 @@ def evaluate_ontology_representations(v=4):
 
         # Init train iterator
         selection = (0, 500)
-        filter_sentences = True
-        eval_iterator = DataIterator(
+        train_iterator = DataIterator(
             data_path, 
             selection=selection, 
             includes_special_tokens=True, 
@@ -68,8 +66,7 @@ def evaluate_ontology_representations(v=4):
 
         # Init eval iterator
         selection = (500, 700)
-        filter_sentences = True
-        train_iterator = DataIterator(
+        eval_iterator = DataIterator(
             data_path, 
             selection=selection, 
             includes_special_tokens=True, 
