@@ -1,11 +1,11 @@
 import json
 import random
 import utils
-from read import read_ontology_types
+from write import save_json
 
 SEED = 25
 
-def annotate(dataset_path, types_path, output_path='annotated_dataset.json'):
+def annotate(dataset_path, types_path, output_path='annotated_data/', seed=None):
     types = json.load(open(types_path))
     add_annotation_examples(types)
     dataset = json.load(open(dataset_path))
@@ -21,7 +21,8 @@ def annotate(dataset_path, types_path, output_path='annotated_dataset.json'):
     sequences_annotated = 0
     sequences_discarded = 0
 
-    random.Random(SEED).shuffle(dataset)
+    selected_seed = seed if seed else random.randint(0, 100)
+    random.Random(selected_seed).shuffle(dataset)
 
     print("Hello, welcome to the labeling program.")
     print("-"*50)
@@ -52,10 +53,11 @@ def annotate(dataset_path, types_path, output_path='annotated_dataset.json'):
         q = "You annotated {} sentences, continue? (yes/no) \n >>".format(sequences_annotated)
         continuing = _ask_yes_no(q)
         if not continuing:
-            _save(annotated_dataset, output_path)
+            _save(annotated_dataset, output_path, sequences_annotated, selected_seed)
             exit()
 
-def _save(dataset, output_path):
+def _save(dataset, output_path, sequences_annotated, seed):
+    save_json(dataset, output_path+'{}_annotated_seed{}.json'.format(sequences_annotated, seed))
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(dataset, f)
 
@@ -70,7 +72,8 @@ def add_annotation_examples(types):
         "machine_learning_algorithm": "convolutional neural network, k-NN, SVM, Expectation Maximization, BERT ...",
         "hardware": "GeForce GTX 1080 Ti, Intel, TPU v3 ...",
         "metric": "F1-score, AUC, BLEU, ROUGE, average precision, Kappa score ...",
-        "technique": "regularization, drop-out, masking, adversarial training ..."
+        "technique": "regularization, drop-out, masking, adversarial training ...",
+        "other": "Not part of current type set, but quite certainly an entity."
     }
 
     relation_examples = {
@@ -90,7 +93,6 @@ def add_annotation_examples(types):
 
 
 def annotate_sequence(sequence, types, actions, skip_relations=False):
-    tokens = sequence["tokens"]
     entities = _annotate_entities(sequence, [], actions, types)
     if len(entities) < 2 or skip_relations:
         relations = []
@@ -147,7 +149,7 @@ def _annotate_entities(sequence, entities, actions={}, types={}):
                                   actions.keys(), types["entities"].keys())
         annotated_entities, stop = _check_action(action, annotated_entities)
 
-        if utils.check_nones([start, end, type_]):
+        if utils.no_nones([start, end, type_]):
             annotated_entities.append({"start": start, "end": end, "type": type_})
 
     return annotated_entities
@@ -201,7 +203,7 @@ def _annotate_relations(sequence, entities, relations, actions={}, types={}):
                                   actions.keys(), types["relations"].keys())
         annotated_relations, stop = _check_action(action, annotated_relations)
 
-        if utils.check_nones([head, tail, type_]):
+        if utils.no_nones([head, tail, type_]):
             annotated_relations.append({"head": head, "tail": tail, "type": type_})
 
     return annotated_relations
@@ -277,6 +279,7 @@ def _ask_type(q, actions={}, types={}):
 
 
 if __name__ == "__main__":
-    dataset_path = "data/DistantlySupervisedDatasets/ontology_v5/02_04_2020_16_22_09/train/combined_labeling/dataset.json"
-    types_path = "data/DistantlySupervisedDatasets/ontology_v5/02_04_2020_16_22_09/train/ontology_types.json"
-    annotate(dataset_path, types_path)
+    dataset_path = "data/DistantlySupervisedDatasets/annotation/test/combined_labeling/dataset.json"
+    types_path = "data/DistantlySupervisedDatasets/annotation/test/ontology_types.json"
+    output_path = 'data/annotated/'
+    annotate(dataset_path, types_path, seed=SEED)
