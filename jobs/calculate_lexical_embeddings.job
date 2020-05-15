@@ -20,4 +20,4 @@ cd $TMPDIR/distantly-supervised-dataset
 
 python script.py
 
-cp -r data/DistantlySupervisedDatasets/ $HOME/distantly-supervised-dataset/data/
+cp -r data/ontology/ $HOME/distantly-supervised-dataset/data/
