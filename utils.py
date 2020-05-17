@@ -104,7 +104,7 @@ def index2char(tokens):
     return char_tuples  
 
 
-def check_nones(l):
+def no_nones(l):
     no_nones = True
     for item in l:
         if item==None:
