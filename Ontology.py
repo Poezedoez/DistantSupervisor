@@ -97,7 +97,7 @@ class Ontology:
         try:
             for entity in self.entities:
                 entry = self.entity_embeddings.get(entity, entity)
-                embedding = entry.get("embedding"), np.zeros(null_shape)
+                embedding = entry.get("embedding", np.zeros(null_shape))
                 embeddings.append(embedding)
                 # self.entity_embeddings[entity]["embedding"] = embedding
                 self.entities[entity]["count"] = entry.get("count", 0)
@@ -108,7 +108,7 @@ class Ontology:
             flattened_entity_embeddings = {token: v for _, token_dict  in self.entity_embeddings.items() 
                                             for token, v in token_dict.items()}
             print(flattened_entity_embeddings.keys())
-            self.entity_embeddings = {token: {"embedding": torch.zeros(embedder.embedding_size), "count": 0}  
+            self.entity_embeddings = {token: {"embedding": torch.zeros(null_shape), "count": 0}  
                                       for token in self.entities}
             for entity in self.entities:
                 embedding = flattened_entity_embeddings.get(entity, np.zeros(null_shape))
@@ -152,7 +152,7 @@ class Ontology:
                 entity_similarity_scores[entity_string].append(score)
                 assert(entity_string in self.entities) # sanity check
         
-        entity_means = [np.array(v).mean() for k, v in entity_similarity_scores.items()]
+        entity_means = [np.array(v).mean() for k, v in entity_similarity_scores.items() if v]
         overall_mean = np.array(entity_means).mean()
         filter_used = "filtered" if data_iterator.filter_sentences else "unfiltered" 
         print("Similarity score over all concepts for |{}| reduction |{}|: {:0.2f}".format(f_reduce, filter_used, overall_mean))
