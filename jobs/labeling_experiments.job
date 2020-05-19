@@ -31,7 +31,7 @@ for i in 0.6 0.62 0.64 0.66 0.68 0.7 0.72 0.74 0.76 0.78 0.8 0.82 0.84 0.86 0.88
 do 
     python DistantSupervisor.py  \
     --selection 500 700 \
-    --output_path "data/DistantlySupervisedDatasets/ontology_v$V/$RUN_NAME/dev/cos_theta_${i}" \
+    --output_path "data/DistantlySupervisedDatasets/ontology_v$V/$RUN_NAME/dev/cos_theta_${i}/" \
     --timestamp_given \
     --label_strategy $COMBINED_LABELING \
     --cos_theta $i \
