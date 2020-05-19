@@ -27,7 +27,7 @@ EMB_PATH="data/ontology/v${V}_entity_embeddings_${REDUCE}_filtered.json"
 DATE=`date +%d_%m_%Y_%H_%M_%S`
 RUN_NAME="${REDUCE}_filtered_$DATE";
 
-for i in 0.7 0.72 0.74 0.76 0.78 0.8 0.82 0.84 0.86 0.88 0.9 0.92 0.94 0.96 0.98 1.0
+for i in 0.6 0.62 0.64 0.66 0.68 0.7 0.72 0.74 0.76 0.78 0.8 0.82 0.84 0.86 0.88 0.9
 do 
     python DistantSupervisor.py  \
     --selection 500 700 \
