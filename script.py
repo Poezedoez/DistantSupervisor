@@ -7,6 +7,7 @@ from nltk.translate.ribes_score import position_of_ngram
 from embedders import BertEmbedder
 from Ontology import Ontology
 from read import DataIterator
+import numpy as np
 
 def read_full_texts(path):
     flist = os.listdir(path)
@@ -82,8 +83,58 @@ def evaluate_ontology_representations(v=4):
 
     save_json(results, results_path+'evaluation_scores.json')
 
+def context_consistency_scores(v=42, f_reduce="mean"):
+    data_path = "data/ScientificDocuments/"
+    entities_path = "data/ontology/v{}_ontology_entities.csv".format(v)
+    relations_path = "data/ontology/v{}_ontology_relations.csv".format(v)
+    results_path = "data/ontology/evaluation/"
+    embedder = BertEmbedder('data/scibert_scivocab_cased')
+    context_consistency_scores = {}
+
+    # Init train iterator
+    selection = (0, 500)
+    train_iterator = DataIterator(
+        data_path, 
+        selection=selection, 
+        includes_special_tokens=True, 
+        filter_sentences=True
+    )
+
+    # Init eval iterator
+    selection = (500, 700)
+    eval_iterator = DataIterator(
+        data_path, 
+        selection=selection, 
+        includes_special_tokens=True, 
+        filter_sentences=True
+    )
+
+    save_path = "data/ontology/v{}_entity_embeddings_{}_filtered.json".format(v, f_reduce)
+    ontology = Ontology(entities_path, relations_path)
+    ontology.calculate_entity_embeddings(train_iterator, embedder, f_reduce)
+    save_json(ontology.entity_embeddings, save_path)
+    similarity_scores = ontology.evaluate_entity_embeddings(eval_iterator, embedder, f_reduce)
+    stds = []
+    entities = []
+    for i, (entity, scores) in enumerate(similarity_scores.items()):
+        if np.any(scores):
+            std = np.std(scores)
+            stds.append(std)
+            entities.append(entity)
+
+    a = stds-np.min(stds)
+    b = np.max(stds)-np.min(stds)
+    normalized_stds = np.divide(a, b, out=np.zeros_like(a), where=b!=0)    
+    for entity, cis in zip(entities, normalized_stds):
+        ccs = 1-cis
+        context_consistency_scores[entity] = ccs
+        print(entity, ccs)
+
+    save_json(context_consistency_scores, results_path+'v{}_context_consistency_scores.json'.format(v))
+
 if __name__ == "__main__":
-    evaluate_ontology_representations()
+    # evaluate_ontology_representations()
+    context_consistency_scores()
 
 
 

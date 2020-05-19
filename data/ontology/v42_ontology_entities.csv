@@ -1,0 +1,268 @@
+OntologyID,Class,Instance
+EN_1000002,dataset,Stanford Question Answering Dataset
+EN_1000002,dataset,SQUAD
+EN_1000003,dataset,ImageNet
+EN_1000004,dataset,Stanford Natural Language Inference corpus
+EN_1000004,dataset,SNLI
+EN_1000005,dataset,MultiNLI
+EN_1000006,dataset,Simple Wiki
+EN_1000007,dataset,IMDB Reviews
+EN_1000007,dataset,IMDB Dataset
+EN_1000008,dataset,Wordnet
+EN_1000009,dataset,NewsQA
+EN_1000010,dataset,MS Marco
+EN_1000011,dataset,TweetQA
+EN_1000012,dataset,WikiQA
+EN_1000013,dataset,bAbi
+EN_1000014,dataset,CIFAR-10
+EN_1000015,dataset,MS Coco
+EN_1000016,dataset,MSLR-WEB30K
+EN_1000017,dataset,Yahoo C14B
+EN_1000018,dataset,LETOR4.0
+EN_1000019,dataset,DBLP-Citation-network
+EN_1000038,metric,Euclidean
+EN_1000039,metric,Manhattan
+EN_1000040,metric,Minkowski
+EN_1000041,metric,Levenshtein
+EN_1000043,metric,Bilingual evaluation understudy
+EN_1000043,metric,BLEU
+EN_1000044,metric,Recall-Oriented Understudy for Gisting Evaluation
+EN_1000044,metric,ROUGE
+EN_1000045,metric,F1
+EN_1000047,metric,Kappa statistics
+EN_1000050,metric,Mean Average Precision
+EN_1000056,hardware,Intel
+EN_1000058,hardware,NVIDIA_TESLA_K80
+EN_1000059,hardware,NVIDIA_TESLA_P4
+EN_1000060,hardware,NVIDIA_TESLA_P100
+EN_1000061,hardware,NVIDIA_TESLA_T4
+EN_1000062,hardware,NVIDIA_TESLA_V100
+EN_1000063,hardware,GeForce GTX TITAN X
+EN_1000064,hardware,GeForce GT 1030
+EN_1000065,hardware,GeForce GTX 1050
+EN_1000066,hardware,GeForce GTX 1050 Ti
+EN_1000067,hardware,GeForce GTX 1060
+EN_1000068,hardware,GeForce GTX 1070
+EN_1000069,hardware,GeForce GTX 1070 Ti
+EN_1000070,hardware,GeForce GTX 1080
+EN_1000071,hardware,GeForce GTX 1080 Ti
+EN_1000073,hardware,TPU v2
+EN_1000074,hardware,TPU v3
+EN_1000055,hardware,CPU
+EN_1000056,hardware,GPU 
+EN_1000072,hardware,TPU
+EN_1000076,learning_paradigm,Supervised learning
+EN_1000077,learning_paradigm,Unsupervised learning
+EN_1000078,learning_paradigm,Semi-supervised learning
+EN_1000079,learning_paradigm,Reinforcement learning
+EN_1000080,learning_paradigm,Self learning
+EN_1000081,learning_paradigm,Transfer learning
+EN_1000082,learning_paradigm,Curriculum learning
+EN_1000084,software_framework,Tensorflow
+EN_1000085,software_framework,PyTorch
+EN_1000086,software_framework,Theano
+EN_1000087,software_framework,Apache MXNet
+EN_1000088,software_framework,CAFFE
+EN_1000089,software_framework,Torch
+EN_1000090,software_framework,Keras
+EN_1000091,software_framework,DyNet
+EN_1000092,software_framework,MxNet
+EN_1000093,software_framework,Chainer
+EN_1000096,architectural_element,Convolutional layer
+EN_1000097,architectural_element,Pooling layer
+EN_1000098,architectural_element,ReLU layer
+EN_1000099,architectural_element,Fully connected layer
+EN_1000100,architectural_element,Softmax layer
+EN_1000101,architectural_element,Hidden layer
+EN_1000102,architectural_element,Attention layer
+EN_1000107,architectural_element,Softmax
+EN_1000108,architectural_element,ReLu
+EN_1000109,architectural_element,Sigmoid
+EN_1000112,machine_learning_algorithm,Ordinary Least Squares Regression
+EN_1000112,machine_learning_algorithm,OLSR
+EN_1000113,machine_learning_algorithm,Linear Regression
+EN_1000114,machine_learning_algorithm,Logistic Regression
+EN_1000115,machine_learning_algorithm,Stepwise Regression
+EN_1000116,machine_learning_algorithm,Multivariate Adaptive Regression Spline
+EN_1000116,machine_learning_algorithm,MARS
+EN_1000117,machine_learning_algorithm,Locally Estimated Scatterplot Smoothing
+EN_1000117,machine_learning_algorithm,LOESS
+EN_1000119,machine_learning_algorithm,k-Nearest Neighbor
+EN_1000119,machine_learning_algorithm,Nearest Neighbor
+EN_1000119,machine_learning_algorithm,kNN
+EN_1000119,machine_learning_algorithm,k-NN
+EN_1000120,machine_learning_algorithm,Learning Vector Quantization
+EN_1000120,machine_learning_algorithm,LVQ
+EN_1000121,machine_learning_algorithm,Self-Organizing Map
+EN_1000121,machine_learning_algorithm,SOM
+EN_1000122,machine_learning_algorithm,Locally Weighted Learning
+EN_1000122,machine_learning_algorithm,LWL
+EN_1000123,machine_learning_algorithm,Support Vector Machine
+EN_1000123,machine_learning_algorithm,SVM
+EN_1000125,machine_learning_algorithm,Classification and Regression Tree
+EN_1000125,machine_learning_algorithm,CART
+EN_1000126,machine_learning_algorithm,Iterative Dichotomiser 3
+EN_1000126,machine_learning_algorithm,ID3
+EN_1000127,machine_learning_algorithm,C4.5
+EN_1000278,machine_learning_algorithm,C5.0
+EN_1000128,machine_learning_algorithm,Chi-squared Automatic Interaction Detection
+EN_1000128,machine_learning_algorithm,CHAID
+EN_1000129,machine_learning_algorithm,Decision Stump
+EN_1000130,machine_learning_algorithm,M5
+EN_1000131,machine_learning_algorithm,Conditional Decision Tree
+EN_1000133,machine_learning_algorithm,Naive Bayes
+EN_1000134,machine_learning_algorithm,Gaussian Naive Bayes
+EN_1000135,machine_learning_algorithm,Multinomial Naive Bayes
+EN_1000136,machine_learning_algorithm,Averaged One-Dependence Estimator
+EN_1000136,machine_learning_algorithm,AODE
+EN_1000137,machine_learning_algorithm,Bayesian Belief Network
+EN_1000137,machine_learning_algorithm,BBN
+EN_1000138,machine_learning_algorithm,Bayesian Network
+EN_1000138,machine_learning_algorithm,BN
+EN_1000140,machine_learning_algorithm,k-Means
+EN_1000141,machine_learning_algorithm,k-Medians
+EN_1000142,machine_learning_algorithm,Expectation Maximisation
+EN_1000143,machine_learning_algorithm,Hierarchical Clustering
+EN_1000145,machine_learning_algorithm,Perceptron
+EN_1000146,machine_learning_algorithm,Multilayer Perceptron
+EN_1000146,machine_learning_algorithm,MLP
+EN_1000147,machine_learning_algorithm,Back-Propagation
+EN_1000148,machine_learning_algorithm,Hopfield Network
+EN_1000149,machine_learning_algorithm,Radial Basis Function Network
+EN_1000149,machine_learning_algorithm,RBFN
+EN_1000150,machine_learning_algorithm,Convolutional neural network
+EN_1000150,machine_learning_algorithm,CNN
+EN_1000150,machine_learning_algorithm,convnet
+EN_1000153,machine_learning_algorithm,Recurrent neural network
+EN_1000153,machine_learning_algorithm,RNN
+EN_1000154,machine_learning_algorithm,Long short-term memory
+EN_1000154,machine_learning_algorithm,LSTM
+EN_1000155,machine_learning_algorithm,Gated recurrent unit
+EN_1000155,machine_learning_algorithm,GRU
+EN_1000156,machine_learning_algorithm,Generative adversarial network
+EN_1000156,machine_learning_algorithm,GAN
+EN_1000157,machine_learning_algorithm,Resnet
+EN_1000158,machine_learning_algorithm,Variational autoencoder
+EN_1000158,machine_learning_algorithm,VAE
+EN_1000159,machine_learning_algorithm,Gamma-ray burst coordinates network
+EN_1000160,machine_learning_algorithm,Auto-Encoder
+EN_1000161,machine_learning_algorithm,Transformer
+EN_1000162,machine_learning_algorithm,BERT
+EN_1000163,machine_learning_algorithm,XLNet
+EN_1000164,machine_learning_algorithm,AlexNet
+EN_1000165,machine_learning_algorithm,Inception
+EN_1000166,machine_learning_algorithm,ALBERT
+EN_1000167,machine_learning_algorithm,Roberta
+EN_1000168,machine_learning_algorithm,SciBERT
+EN_1000170,machine_learning_algorithm,Principal Component Analysis
+EN_1000171,machine_learning_algorithm,PCA
+EN_1000172,machine_learning_algorithm,Principal Component Regression
+EN_1000172,machine_learning_algorithm,Partial Least Squares Regression
+EN_1000172,machine_learning_algorithm,PLSR
+EN_1000173,machine_learning_algorithm,Sammon Mapping
+EN_1000174,machine_learning_algorithm,Multidimensional Scaling
+EN_1000174,machine_learning_algorithm,MDS
+EN_1000175,machine_learning_algorithm,Projection Pursuit
+EN_1000176,machine_learning_algorithm,Linear Discriminant Analysis
+EN_1000176,machine_learning_algorithm,LDA
+EN_1000177,machine_learning_algorithm,Mixture Discriminant Analysis
+EN_1000177,machine_learning_algorithm,MDA
+EN_1000178,machine_learning_algorithm,Quadratic Discriminant Analysis
+EN_1000178,machine_learning_algorithm,QDA
+EN_1000179,machine_learning_algorithm,Flexible Discriminant Analysis
+EN_1000179,machine_learning_algorithm,FDA
+EN_1000182,machine_learning_algorithm,Bootstrapped Aggregation
+EN_1000182,machine_learning_algorithm,Bagging
+EN_1000183,machine_learning_algorithm,Adaboost
+EN_1000184,machine_learning_algorithm,Weighted Average
+EN_1000184,machine_learning_algorithm,Blending
+EN_1000185,machine_learning_algorithm,Stacked Generalization
+EN_1000185,machine_learning_algorithm,Stacking
+EN_1000186,machine_learning_algorithm,Gradient Boosting Machine
+EN_1000186,machine_learning_algorithm,GBM
+EN_1000187,machine_learning_algorithm,Gradient Boosted Regression Trees
+EN_1000187,machine_learning_algorithm,GBRT
+EN_1000188,machine_learning_algorithm,Random Forest
+EN_1000191,application_area,Question Answering
+EN_1000191,application_area,QA
+EN_1000192,application_area,NER
+EN_1000192,application_area,Named-entity recognition
+EN_1000193,application_area,Computational Lexicology
+EN_1000194,application_area,Computational Morphology
+EN_1000195,application_area,Computational Phonology
+EN_1000196,application_area,Computational Semantics
+EN_1000197,application_area,Computational Syntax
+EN_1000198,application_area,Dialectometrics
+EN_1000199,application_area,Dialogue Systems
+EN_1000200,application_area,Distributional Hypothesis
+EN_1000201,application_area,Information Extraction
+EN_1000202,application_area,Lexical Acquisition
+EN_1000203,application_area,Machine Translation
+EN_1000204,application_area,Natural Language Generation
+EN_1000205,application_area,Natural Language Understanding 
+EN_1000205,application_area,NLU
+EN_1000206,application_area,Multiword Expressions
+EN_1000207,application_area,Parsing
+EN_1000208,application_area,Part-of-speech tagging
+EN_1000208,application_area,POS tagging
+EN_1000210,application_area,Semantics
+EN_1000211,application_area,Speech Processing
+EN_1000212,application_area,Statistical Semantics
+EN_1000213,application_area,Text Categorization
+EN_1000214,application_area,Textual Entailment and Natural Language Inference
+EN_1000215,application_area,Text Summarization
+EN_1000216,application_area,Word Sense Disambiguation
+EN_1000216,application_area,WSD
+EN_1000218,application_area,Image Classification
+EN_1000219,application_area,Object Localization
+EN_1000220,application_area,Object Detection
+EN_1000221,application_area,Segmentation
+EN_1000222,application_area,Image Style Transfer
+EN_1000223,application_area,Image Colorization
+EN_1000224,application_area,Image Reconstruction
+EN_1000225,application_area,Image Super-Resolution
+EN_1000226,application_area,Image Synthesis
+EN_1000228,application_area,Query parsing
+EN_1000229,application_area,Query processing
+EN_1000230,application_area,Query expansion
+EN_1000231,application_area,Query intent classification
+EN_1000236,application_area,Robot
+EN_1000237,application_area,Robotic Actuation
+EN_1000238,application_area,Robotic sensing
+EN_1000239,application_area,Robotic manipulation
+EN_1000240,application_area,Robotic locomotion
+EN_1000241,application_area,Robotic navigation
+EN_1000242,application_area,Human-robot interaction
+EN_1000244,application_area,Speaker identification
+EN_1000245,application_area,Voice user interfaces
+EN_1000246,application_area,Speech-to-text processing
+EN_1000249,technique,Stochastic Gradient Descent
+EN_1000249,technique,SGD
+EN_1000251,technique,RMSProp
+EN_1000252,technique,Adam
+EN_1000253,technique,Adadelta
+EN_1000254,technique,Adagrad
+EN_1000255,technique,AdamW
+EN_1000256,technique,AdaMax
+EN_1000257,technique,Kalman-based Stochastic Gradient Descent
+EN_1000258,technique,Second-Order Methods
+EN_1000260,technique,Learning rate decay
+EN_1000261,technique,Drop out
+EN_1000263,technique,Cross validation
+EN_1000264,technique,Leave one out
+EN_1000266,technique,Batch Normalization
+EN_1000267,technique,Masking
+EN_1000269,technique,Regularization
+EN_1000270,technique,Adversarial attacks
+EN_1000279,technique,Adversarial training
+EN_1000271,technique,Data augmentation
+EN_1000273,technique,Cross entropy loss
+EN_1000274,technique,L2-loss
+EN_1000275,technique,Logarithmic loss
+EN_1000277,technique,Area Under its Curve
+blabla, test, base
+blabla, test, center
+blabla, test, make
+blabla, test, head
+blabla, test, light
+blabla, test, right
