@@ -18,18 +18,29 @@ source activate lisaenv
 cp -r $HOME/distantly-supervised-dataset/ $TMPDIR
 cd $TMPDIR/distantly-supervised-dataset
 
-RUN_NAME="`date +%d_%m_%Y_%H_%M_%S`";
-CPUS_AVAILABLE=$(nproc)
-echo the amount of available cpus = $CPUS_AVAILABLE
-start=`date +%s`
+COMBINED_LABELING=2
+V=4
+ENT_PATH="data/ontology/v${V}_ontology_entities.csv" 
+REL_PATH="data/ontology/v${V}_ontology_relations.csv" 
+REDUCE="mean"
+EMB_PATH="data/ontology/v${V}_entity_embeddings_${REDUCE}_filtered.json" 
+DATE=`date +%d_%m_%Y_%H_%M_%S`
+RUN_NAME="${REDUCE}_filtered_$DATE";
+
 for i in 0.7 0.72 0.74 0.76 0.78 0.8 0.82 0.84 0.86 0.88 0.9 0.92 0.94 0.96 0.98 1.0
 do 
-    time python DistantlySupervisedDatasets.py  --selection 500 501 --output_path "data/DistantlySupervisedDatasets/$RUN_NAME/dev/$i/" --label_function 2 --cos_theta $i &    
+    python DistantSupervisor.py  \
+    --selection 500 700 \
+    --output_path "data/DistantlySupervisedDatasets/ontology_v$V/$RUN_NAME/dev/cos_theta_${i}" \
+    --timestamp_given \
+    --label_strategy $COMBINED_LABELING \
+    --cos_theta $i \
+    --ontology_entities_path $ENT_PATH \
+    --ontology_relations_path $REL_PATH \
+    --entity_embedding_path $EMB_PATH \
+    --f_reduce $REDUCE \
+    --filter_sentences
 done
-wait
-end=`date +%s`
-runtime=$((end-start))
-echo took $runtime seconds to execute whole loop
 
 
 
