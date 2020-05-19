@@ -101,7 +101,7 @@ def context_consistency_scores(v=42, f_reduce="mean"):
     )
 
     # Init eval iterator
-    selection = (500, 700)
+    selection = (500, 900)
     eval_iterator = DataIterator(
         data_path, 
         selection=selection, 
@@ -109,15 +109,16 @@ def context_consistency_scores(v=42, f_reduce="mean"):
         filter_sentences=True
     )
 
-    save_path = "data/ontology/v{}_entity_embeddings_{}_filtered.json".format(v, f_reduce)
-    ontology = Ontology(entities_path, relations_path)
-    ontology.calculate_entity_embeddings(train_iterator, embedder, f_reduce)
-    save_json(ontology.entity_embeddings, save_path)
+    entity_embedding_path = "data/ontology/v{}_entity_embeddings_{}_filtered.json".format(v, f_reduce)
+    ontology = Ontology(entities_path, relations_path, entity_embedding_path)
+    if not ontology.entity_embeddings:
+        ontology.calculate_entity_embeddings(train_iterator, embedder, f_reduce)
+        save_json(ontology.entity_embeddings, entity_embedding_path)
     similarity_scores = ontology.evaluate_entity_embeddings(eval_iterator, embedder, f_reduce)
     stds = []
     entities = []
     for i, (entity, scores) in enumerate(similarity_scores.items()):
-        if np.any(scores):
+        if len(scores) > 1 and np.any(scores):
             std = np.std(scores)
             stds.append(std)
             entities.append(entity)
