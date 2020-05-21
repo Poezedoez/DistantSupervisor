@@ -97,6 +97,9 @@ class BertEmbedder(Embedder):
 
     def reduce_embeddings(self, embeddings, start, end, original_tokens, 
                           orig2tok, f_reduce="mean"):
+        def _first(t):
+            return t[0]
+
         def _mean(t):
             embedding = t.mean(dim=0)
             return embedding
@@ -110,11 +113,12 @@ class BertEmbedder(Embedder):
             embedding = t.gather(0, abs_max_indices.view(1,-1)).squeeze()  
             return embedding
 
+
         emb_positions = orig2tok[start:end+1]
         if len(emb_positions) == 1:  # last token in sentence
             emb_positions.append(emb_positions[-1]+1)
         emb_start, emb_end = emb_positions[0], emb_positions[-1]
-        reduction = {"mean":_mean, "max": _max, "abs_max":_abs_max}.get(f_reduce)
+        reduction = {"mean":_mean, "max": _max, "abs_max":_abs_max, "first":_first}.get(f_reduce)
         selected_features = [emb.tolist() for emb in embeddings[emb_start:emb_end]]
         t = torch.FloatTensor(selected_features)
         embedding = reduction(t)  

@@ -16,7 +16,9 @@ def noun_phrases(tokens):
     """
 
     cp = nltk.RegexpParser(grammar)
-    result = cp.parse(nltk.pos_tag(tokens))
+    pos = nltk.pos_tag(tokens)
+    # print(pos)
+    result = cp.parse(pos)
     noun_phrases = []
     for subtree in result.subtrees(filter=lambda t: t.label() == 'NP'):
         np = ''
@@ -29,24 +31,31 @@ def noun_phrases(tokens):
         splitted_np = np.split()
         start = position_of_ngram(tuple(splitted_np), tokens)
         end = start+len(splitted_np)
-        spans.append((start, end))
+        np_tokens = tokens[start:end]
+        if _alphabetical_sequence(np_tokens, threshold=0.4): 
+            spans.append((start, end)) # note: len(spans) != len(noun_phrases)
 
     return noun_phrases, spans
 
-
-def proper_sentence(subtokens, symbol_threshold=0.2):
-    ## Verb checking
+def _contains_verb(tokens):
     VERBS = {"VB", "VBD", "VBG", "VBN", "VBP", "VBZ"}
-    glued_tokens, _, _ = glue_subtokens(subtokens)
-    pos_tags = {t[1] for t in nltk.pos_tag(glued_tokens)}
+    pos_tags = {t[1] for t in nltk.pos_tag(tokens)}
     has_verbs = VERBS.intersection(pos_tags)
 
-    ## Symbol checking
-    alphabetical_sentence = False
-    alphabet_tokens = len([s for s in glued_tokens if re.match("^[a-zA-Z]*$", s)])
-    if float(alphabet_tokens)/float(len(glued_tokens)) > symbol_threshold:
-        alphabetical_sentence = True
-    proper = (has_verbs and alphabetical_sentence)
+    return has_verbs
+
+def _alphabetical_sequence(tokens, threshold=0.2):
+    alphabetical_sequence = False
+    alphabet_tokens = len([s for s in tokens if re.match("^[a-zA-Z]*$", s)])
+    if float(alphabet_tokens)/float(len(tokens)) > threshold:
+        alphabetical_sequence = True
+
+    return alphabetical_sequence
+
+def proper_sequence(tokens, symbol_threshold=0.2):
+    has_verbs = _contains_verb(tokens)
+    alphabetical_sequence = _alphabetical_sequence(tokens)
+    proper = (has_verbs and alphabetical_sequence)
     # if not proper:
     #     v = "VERBS" if not has_verbs else ''
     #     a = "a-Z" if not alphabetical_sentence else ''
@@ -74,7 +83,7 @@ def string_match(tokens, ontology, embedder, execute=True):
 
 
 def embedding_match(sentence_embeddings, sentence_subtokens, glued2tok, glued_tokens, 
-                    ontology, embedder, execute=True, threshold=0.80, f_reduce="mean"):
+                    ontology, embedder, execute=True, threshold=100, f_reduce="none", k=5):
     matches = []
     if not execute:
         return matches
@@ -84,26 +93,23 @@ def embedding_match(sentence_embeddings, sentence_subtokens, glued2tok, glued_to
     nps_embeddings = []
     for np_start, np_end in nps_spans:
         np_embedding, _ = embedder.reduce_embeddings(sentence_embeddings, 
-                                                np_start, 
-                                                np_end, 
-                                                glued_tokens, 
-                                                glued2tok, 
-                                                f_reduce)
+            np_start, np_end, glued_tokens, glued2tok, f_reduce)
         nps_embeddings.append(np_embedding.numpy())
 
     if not nps_embeddings:
         return matches
 
-    # Classify noun chunks based on threshold with ontology concepts
-    nps_array = np.stack(nps_embeddings)
-    similarities = cosine_similarity(nps_array, ontology.embedding_array)
-    max_similarity_indices = similarities.argmax(axis=1)
-    max_similarities = np.take(similarities, max_similarity_indices)
-    for i, span in enumerate(nps_spans):
-        if max_similarities[i] > threshold:
-            entity_string, type_, count = ontology.fetch_entity(max_similarity_indices[i])
-            # print(nps[i], "\t {:0.2f} \t ({}({}), {}), ".format(max_similarities[i], entity_string, count, type_))
-            matches.append((span[0], span[1], type_))
+    # Classify noun chunks based on threshold with nearest ontology concept
+    D, I = ontology.entity_index.search(np.stack(nps_embeddings), 1)
+    mask = np.where(D < threshold, 1, 0).reshape(len(D))
+    types = [ontology.entity_table[index]["type"] for row in I for index in row]
+    lookalikes = [ontology.entity_table[index]["string"] for row in I for index in row]
+    distances = D.reshape(len(D))
+    for (start, end), valid, type_, distance, lookalike in zip(nps_spans, mask, types, distances, lookalikes):
+        # print(glued_tokens[start:end], type_, distance, lookalike)
+        if valid:
+            print(glued_tokens[start:end], type_, distance, lookalike)
+            matches.append((start, end, type_))
 
     return matches
 
@@ -117,5 +123,10 @@ def combined_match(string_matches, embedding_matches, execute=True):
     return matches
 
 if __name__ == "__main__":
-    test = ["Multilinear", "sparse", "principal", "component", "analysis", "of", "sublinear", "rich", "data"]
-    print(noun_phrases(test)[0])
+    # test = ["Multilinear", "sparse", "principal", "component", "analysis", "of", "sublinear", "rich", "data"]
+    test1 = ["We", "use", "an", "MLP", "with", "5", "hidden", "layers"]
+    test2 = ["ALBERT",  "achieves", "a", "92.28", "F1-score", "on", "the", "Stanford", "Question", "Answering", "Dataset"]
+    # test2  = ["Throughout", "the", "nonparametric", "and", "parametric", "theory", ",", "we", "rely", "on", "several", "simple", "yet", "powerful", "oracle", "inequalities", "for", "GAN", ",", "which", "could", "be", "of", "independent", "interest"]
+    print(noun_phrases(test1)[0])
+    print(noun_phrases(test2)[0])
+

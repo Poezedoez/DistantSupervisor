@@ -9,8 +9,9 @@ import os
 import glob
 import nltk
 import re
-from heuristics import proper_sentence
+from heuristics import proper_sequence
 from embedders import glue_subtokens
+import faiss
 
 class DataIterator:
     def __init__(self, data, selection=None, includes_special_tokens=True, filter_sentences=True):
@@ -31,10 +32,10 @@ class DataIterator:
                 subtokens_length = len(sentence) - (2 * extra)
                 subtokens = sentence[extra:-extra]
                 embeddings = document_embeddings[offset+extra:offset+extra+subtokens_length]
-                if proper_sentence(subtokens) or not self.filter_sentences:
+                glued_tokens, _, _ = glue_subtokens(subtokens)
+                if proper_sequence(glued_tokens) or not self.filter_sentences:
                     yield subtokens, embeddings, doc_name
                 else:
-                    glued_tokens, _, _ = glue_subtokens(subtokens)
                     improper_sentences += 1
                 offset += len(sentence)
         print("improper sentences found", improper_sentences)
@@ -52,6 +53,7 @@ class DataIterator:
             embeddings = np.load(embeddings_path)
 
             yield text, embeddings, folder
+
 
 def read_ontology_entity_types(path):
     ontology_entities = defaultdict(dict)
@@ -72,15 +74,3 @@ def read_ontology_relation_types(path):
         ontology_relations[head][tail] = relation
             
     return ontology_relations
-
-
-def read_entity_embeddings(path, entities={}):
-    if os.path.isfile(path):
-        with open(path, 'r', encoding='utf-8') as json_file:
-            entity_embeddings = json.load(json_file)
-            return entity_embeddings
-    else:
-        return None
-
-
-
