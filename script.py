@@ -50,36 +50,32 @@ def evaluate_ontology_representations(v=4):
     relations_path = "data/ontology/v{}/ontology_relations.csv".format(v)
     results_path = "data/ontology/evaluation/v{}/".format(v)
     embedder = BertEmbedder('data/scibert_scivocab_cased')
-    strategies = ["absmax_filtered", "absmax_unfiltered", "max_filtered", "max_unfiltered", "mean_filtered", "mean_unfiltered"]
-    reductions = ["abs_max", "abs_max", "max", "max", "mean", "mean"]
-    filters = [True, False, True, False, True, False]
+    pooling_functions = ["abs_max", "max", "mean"]
+
+    # Init train iterator
+    selection = (0, 500)
+    train_iterator = DataIterator(
+        data_path, 
+        selection=selection, 
+        includes_special_tokens=True, 
+    )
+
+    # Init eval iterator
+    selection = (500, 700)
+    eval_iterator = DataIterator(
+        data_path, 
+        selection=selection, 
+        includes_special_tokens=True, 
+    )
+
     results = {}
-    for s, r, f in zip(strategies, reductions, filters):
-
-        # Init train iterator
-        selection = (0, 500)
-        train_iterator = DataIterator(
-            data_path, 
-            selection=selection, 
-            includes_special_tokens=True, 
-            filter_sentences=f
-        )
-
-        # Init eval iterator
-        selection = (500, 700)
-        eval_iterator = DataIterator(
-            data_path, 
-            selection=selection, 
-            includes_special_tokens=True, 
-            filter_sentences=f
-        )
-
+    for p in pooling_functions:
         save_path = "data/ontology/v{}/faiss/".format(v)
         ontology = Ontology(entities_path, relations_path)
-        ontology.calculate_entity_embeddings(train_iterator, embedder, r)
-        similarity_scores = ontology.evaluate_entity_embeddings(eval_iterator, embedder, r)
-        ontology.save(results_path, r, f)
-        results[s] = similarity_scores
+        ontology.calculate_entity_embeddings(train_iterator, embedder, p)
+        similarity_scores = ontology.evaluate_entity_embeddings(eval_iterator, embedder, p)
+        ontology.save(results_path, p)
+        results[p] = similarity_scores
 
     save_json(results, results_path+'evaluation_scores.json')
 

@@ -90,7 +90,7 @@ class Ontology:
                 D, I = self.entity_index.search(mentioned_embedding, 1)
                 s, t = self.fetch_entity(I[0][0])
                 if entity_string==s:
-                    entity_similarity_scores[entity_string].append(D[0][0]) 
+                    entity_similarity_scores[entity_string].append(int(D[0][0])) 
                 else:
                     print(entity_string, s)
         
