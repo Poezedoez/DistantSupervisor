@@ -50,9 +50,11 @@ def evaluate_ontology_representations(v=4):
     relations_path = "data/ontology/v{}_ontology_relations.csv".format(v)
     results_path = "data/ontology/evaluation/"
     embedder = BertEmbedder('data/scibert_scivocab_cased')
-    strategies = ["absmax_filtered", "absmax_unfiltered", "max_filtered", "max_unfiltered", "mean_filtered", "mean_unfiltered"]
-    reductions = ["abs_max", "abs_max", "max", "max", "mean", "mean"]
-    filters = [True, False, True, False, True, False]
+    # strategies = ["absmax_filtered", "absmax_unfiltered", "max_filtered", "max_unfiltered", "mean_filtered", "mean_unfiltered"]
+    # reductions = ["abs_max", "abs_max", "max", "max", "mean", "mean"]
+    # filters = [True, False, True, False, True, False]
+    strategies = ["absmax, "max", "mean"]
+    filters = [True, True, True]
     results = {}
     for s, r, f in zip(strategies, reductions, filters):
 
@@ -134,8 +136,8 @@ def context_consistency_scores(v=42, f_reduce="mean"):
     save_json(context_consistency_scores, results_path+'v{}_context_consistency_scores.json'.format(v))
 
 if __name__ == "__main__":
-    # evaluate_ontology_representations()
-    context_consistency_scores()
+    evaluate_ontology_representations()
+    # context_consistency_scores()
 
 
 
