@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=distantly_supervised_dataset
-#SBATCH --time=12:00:00
+#SBATCH --job-name=DSD_labeling_experiments
+#SBATCH --time=20:00:00
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=16
 #SBATCH --ntasks-per-node=1
