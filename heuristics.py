@@ -2,9 +2,10 @@ from utils import KnuthMorrisPratt
 from embedders import glue_subtokens
 from nltk.translate.ribes_score import position_of_ngram
 import nltk
-from sklearn.metrics.pairwise import cosine_similarity
+from sklearn import preprocessing
 import numpy as np
 import re
+from collections import Counter
 
 
 def noun_phrases(tokens):
@@ -17,7 +18,6 @@ def noun_phrases(tokens):
 
     cp = nltk.RegexpParser(grammar)
     pos = nltk.pos_tag(tokens)
-    # print(pos)
     result = cp.parse(pos)
     noun_phrases = []
     for subtree in result.subtrees(filter=lambda t: t.label() == 'NP'):
@@ -26,16 +26,18 @@ def noun_phrases(tokens):
             np = np + ' ' + x[0]
         noun_phrases.append(np.strip())
 
-    spans = []
+    selected_spans = []
+    selected_nps = []
     for np in noun_phrases:
         splitted_np = np.split()
         start = position_of_ngram(tuple(splitted_np), tokens)
         end = start+len(splitted_np)
         np_tokens = tokens[start:end]
         if _alphabetical_sequence(np_tokens, threshold=0.4): 
-            spans.append((start, end)) # note: len(spans) != len(noun_phrases)
+            selected_spans.append((start, end))
+            selected_nps.append(np)
 
-    return noun_phrases, spans
+    return selected_nps, selected_spans
 
 def _contains_verb(tokens):
     VERBS = {"VB", "VBD", "VBG", "VBN", "VBP", "VBZ"}
@@ -83,7 +85,16 @@ def string_match(tokens, ontology, embedder, execute=True):
 
 
 def embedding_match(sentence_embeddings, sentence_subtokens, glued2tok, glued_tokens, 
-                    ontology, embedder, execute=True, threshold=100, f_reduce="none", k=5):
+                    ontology, embedder, execute=True, threshold=0.83, token_pooling="mean"):
+    def _vote(similarities, neighbors):
+        weight_counter = Counter()
+        for similarity, neighbor in zip(similarities, neighbors):
+            type_ = ontology.entity_table[neighbor]["type"]
+            string = ontology.entity_table[neighbor]["string"]
+            weight_counter[type_] += similarity
+
+        return weight_counter.most_common(1)[0][0]
+
     matches = []
     if not execute:
         return matches
@@ -91,25 +102,39 @@ def embedding_match(sentence_embeddings, sentence_subtokens, glued2tok, glued_to
     # Get embeddings of noun phrase chunks
     nps, nps_spans = noun_phrases(glued_tokens)
     nps_embeddings = []
-    for np_start, np_end in nps_spans:
-        np_embedding, _ = embedder.reduce_embeddings(sentence_embeddings, 
-            np_start, np_end, glued_tokens, glued2tok, f_reduce)
-        nps_embeddings.append(np_embedding.numpy())
+    token2np, np2token = [], []
+    all_tokens = []
+    for i, (np_start, np_end) in enumerate(nps_spans):
+        np_embeddings, matched_tokens = embedder.reduce_embeddings(sentence_embeddings, 
+            np_start, np_end, sentence_subtokens, glued2tok, token_pooling)
+        np2token.append(len(token2np))
+        all_tokens += matched_tokens
+        for emb in np_embeddings:
+            nps_embeddings.append(emb.numpy())
+            token2np.append(i)
 
     if not nps_embeddings:
         return matches
 
-    # Classify noun chunks based on threshold with nearest ontology concept
-    D, I = ontology.entity_index.search(np.stack(nps_embeddings), 1)
-    mask = np.where(D < threshold, 1, 0).reshape(len(D))
-    types = [ontology.entity_table[index]["type"] for row in I for index in row]
-    lookalikes = [ontology.entity_table[index]["string"] for row in I for index in row]
-    distances = D.reshape(len(D))
-    for (start, end), valid, type_, distance, lookalike in zip(nps_spans, mask, types, distances, lookalikes):
-        # print(glued_tokens[start:end], type_, distance, lookalike)
-        if valid:
-            print(glued_tokens[start:end], type_, distance, lookalike)
-            matches.append((start, end, type_))
+    # Classify noun chunks based on similarity threshold with nearest ontology concept
+    q = np.stack(nps_embeddings)
+    q_norm = preprocessing.normalize(q, norm="l2")
+    S, I = ontology.entity_index.search(q_norm, 1)
+    S, I = S.reshape(len(S)), I.reshape(len(S))
+
+    for i, (np_start, np_end) in enumerate(nps_spans):
+        np_slice = np2token[i:i+2]
+        if len(np_slice)==1: # last of spans
+            np_slice.append(np_slice[-1]+1)
+        start, end = np_slice[0], np_slice[-1]
+        similarities = S[start:end]
+        neighbors = I[start:end]
+        tokens = all_tokens[start:end]
+        type_ = _vote(similarities, neighbors)
+        confidence = similarities.mean()
+        if confidence > threshold:
+            # print(nps[i], type_, confidence)
+            matches.append((np_start, np_end, type_))  
 
     return matches
 

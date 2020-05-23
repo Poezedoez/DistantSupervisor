@@ -50,7 +50,7 @@ def evaluate_ontology_representations(v=4):
     relations_path = "data/ontology/v{}/ontology_relations.csv".format(v)
     results_path = "data/ontology/evaluation/v{}/".format(v)
     embedder = BertEmbedder('data/scibert_scivocab_cased')
-    pooling_functions = ["abs_max", "max", "mean"]
+    pooling_functions = ["abs_max", "max", "mean", "none"]
 
     # Init train iterator
     selection = (0, 500)

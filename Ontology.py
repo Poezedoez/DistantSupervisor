@@ -6,7 +6,7 @@ from heuristics import string_match
 import torch
 import numpy as np
 import pandas as pd
-from sklearn.metrics.pairwise import cosine_similarity
+from sklearn import preprocessing
 from argparser import get_parser
 import faiss_index
 
@@ -29,41 +29,93 @@ class Ontology:
 
     def __init__(
         self,
+        version=4,
         entities_path="data/ontology/ontology_entities.csv",
         relations_path="data/ontology/ontology_relations.csv",
         faiss_index_path="data/ontology/faiss/",
     ):
-
+        self.entities_path="data/ontology/v{}/ontology_entities.csv".format(version),
+        self.relations_path="data/ontology/v{}/ontology_relations.csv".format(version),
+        self.faiss_path="data/ontology/v{}/faiss/".format(version),
         self.entities_path = entities_path
         self.relations_path = relations_path
         self.faiss_index_path = faiss_index_path
         self.entities = read.read_ontology_entity_types(entities_path)
-        self.entity_index, self.entity_table = faiss_index.load(faiss_index_path, "entities")
-        self.entity_types, self.entity_types_map = None, None
+        self.entity_index, self.entity_table = None, None
+        self.entity_types = None
         self.relations = read.read_ontology_relation_types(relations_path)
         self.types = self.convert_ontology_types()
+
+    def calculate_entity_embeddings(self, data_iterator, embedder, token_pooling="none", mention_pooling="none"):
+        def _accumulate_mean(embedding, tokens, full_term, type_, ontology_embeddings):
+            entry = {"type": type_, "string": tokens[0], "full_term": full_term}
+            embedding = torch.stack(embeddings).mean()
+            old_mean = ontology_embeddings[full_term]["embeddings"][0]
+            n = ontology_embedding = ontology_embeddings[full_term]["count"]
+            new_mean = old_mean + ((embedding-old_mean)/n)
+            ontology_embeddings[full_term]["embeddings"][0] = new_mean
+            ontology_embeddings[full_term]["entries"][0] = entry
+
+        def _accumulate_max(embedding, tokens, full_term, type_, ontology_embeddings):
+            entry = {"type": type_, "string": tokens[0], "full_term": full_term}
+            old_max = ontology_embeddings[full_term]["embeddings"][0]
+            t = torch.stack(embeddings+[old_max])
+            new_max, _ = t.max(dim=0)
+            ontology_embeddings[full_term]["embeddings"][0] = new_max
+            ontology_embeddings[full_term]["entries"][0] = entry
+
+        def _accumulate_absmax(embedding, tokens, full_term, type_, ontology_embeddings):
+            entry = {"type": type_, "string": tokens[0], "full_term": full_term}
+            old_absmax = ontology_embeddings[full_term]["embeddings"][0]
+            t = torch.stack(embeddings+[old_absmax])
+            abs_max_indices = torch.abs(t).argmax(dim=0)
+            new_absmax = t.gather(0, abs_max_indices.view(1,-1)).squeeze()
+            ontology_embeddings[full_term]["embeddings"][0] = new_absmax
+            ontology_embeddings[full_term]["entries"][0] = entry
+
+        def _accumulate_none(embedding, tokens, full_term, type_, ontology_embeddings):
+            for embedding, token in zip(embeddings, tokens):
+                entry = {"type": type_, "string": token, "full_term": full_term}
+                ontology_embeddings[full_term]["embeddings"].append(embedding)
+                ontology_embeddings[full_term]["entries"].append(entry)
+
+        # Check for existing index + table
+        self.entity_index, self.entity_table = faiss_index.load(self.faiss_path, "entities_T|{}|_M|{}|".format(
+            token_pooling, mention_pooling))
+        if self.entity_index and self.entity_table:
+            return self.entity_index, self.entity_table
         
-            
-    def calculate_entity_embeddings(self, data_iterator, embedder, f_reduce="none"):
         print("Calculating ontology entity embeddings...")
         self.entity_index = faiss_index.init(embedder.embedding_size)
         self.entity_table = []
-        ontology_embeddings = []
+        f_accumulation = {"mean":_accumulate_mean, "absmax":_accumulate_absmax, "max":_accumulate_max,
+            "none": _accumulate_none}
+        zeros = torch.zeros(embedder.embedding_size)
+        zeros_entry = {"type": "null", "string": "null"}
+        ontology_embeddings = defaultdict(lambda : {"embeddings":[zeros], "entries":[zeros_entry], "count": 0})
+
+        # Accumulate entity embeddings
         for sentence_subtokens, sentence_embeddings, _ in data_iterator.iter_sentences():
             glued_tokens, _, glued2tok = glue_subtokens(sentence_subtokens)
             string_matches, matched_strings = string_match(glued_tokens, self, embedder)
             for i, (span_start, span_end, type_) in enumerate(string_matches):
-                embedding, matched_tokens = embedder.reduce_embeddings(sentence_embeddings, 
-                    span_start, span_end, glued_tokens, glued2tok, f_reduce)
-                ontology_embeddings.append(embedding)
-                self.entity_table.append({"type": type_, "string": matched_strings[i]})
-
-                # sanity check
-                # print(matched_strings[i])
+                embeddings, matched_tokens = embedder.reduce_embeddings(sentence_embeddings, 
+                    span_start, span_end, sentence_subtokens, glued2tok, token_pooling)
                 entity_string = matched_strings[i]
-                assert(entity_string in self.entities) 
+                ontology_embeddings[entity_string]["count"] += 1
+                f_accumulation.get(mention_pooling)(embeddings, matched_tokens, entity_string, 
+                    type_, ontology_embeddings) 
 
-        self.entity_index.add(np.stack(ontology_embeddings))
+        # Index entities
+        embeddings = []
+        entries = []
+        for d in ontology_embeddings.values():
+            embeddings += [emb.tolist() for emb in d["embeddings"]]
+            entries += d["entries"]
+        data = np.array(embeddings, dtype="float32")
+        data_norm = preprocessing.normalize(data, norm="l2")    
+        self.entity_index.add(data_norm)
+        self.entity_table += entries
 
         return self.entity_index, self.entity_table
 
@@ -123,12 +175,11 @@ class Ontology:
         return types
 
 
-    def save(self, output_path, f_reduce="mean", filtered=True):
+    def save(self, output_path="data/ontology/", token_pooling="mean", mention_pooling="none"):
         save_copy(self.entities_path, output_path+'ontology_entities.csv')
         save_copy(self.relations_path, output_path+'ontology_relations.csv')
-        filter_option = "filtered" if filtered else "unfiltered"
-        faiss_index.save(self.entity_index, self.entity_table, "entities_{}_{}".format(f_reduce, filter_option), 
-            output_path+"faiss/")
+        faiss_index.save(self.entity_index, self.entity_table, "entities_T|{}|_M|{}|".format(
+            token_pooling, mention_pooling), output_path+"faiss/")
         save_json(self.types, output_path+'ontology_types.json')
 
 

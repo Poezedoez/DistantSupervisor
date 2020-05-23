@@ -4,7 +4,7 @@ import json
 import os
 
 def init(size):
-    return faiss.IndexFlatL2(size)
+    return faiss.IndexFlatIP(size)
 
 def save(index, table, name, save_path="data/save/"):
     print("Saving {} index...".format(name))
