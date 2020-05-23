@@ -80,9 +80,8 @@ class DistantSupervisor:
 
         # Ready ontology embeddings
         if label_strategy > 0:
-            if not self.ontology.entity_embeddings:
+            if not self.ontology.entity_index:
                 self.ontology.calculate_entity_embeddings(iterator, self.embedder, self.f_reduce)
-            self.ontology.embeddings_to_array()
                 
         # Supervise sentences        
         for sentence_subtokens, sentence_embeddings, doc_name in iterator.iter_sentences():
@@ -113,7 +112,7 @@ class DistantSupervisor:
             print_dataset(dataset_path, self.output_path+'{}/classified_examples.txt'.format(label_function))
 
         # Save ontology used
-        self.ontology.save(self.output_path)
+        self.ontology.save(self.output_path, self.f_reduce, self.filter_sentences)
 
         # Save list of selected documents used for the split
         save_list(self.flist, self.output_path+'filelist.txt')
