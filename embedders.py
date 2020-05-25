@@ -98,23 +98,24 @@ class BertEmbedder(Embedder):
     def reduce_embeddings(self, embeddings, start, end, tokens, 
                           orig2tok, f_reduce="mean"):
         def _first(t, s):
-            return t[0], s[0]
+            return t[0], [s[0]]
 
         def _mean(t, s):
             embedding = t.mean(dim=0)
-            return [embedding], "_".join(s)
+            return [embedding], ["_".join(s)]
 
         def _max(t, s):
             embedding, _ = t.max(dim=0)
-            return [embedding], "_".join(s)
+            return [embedding], ["_".join(s)]
 
         def _absmax(t, s):
             abs_max_indices = torch.abs(t).argmax(dim=0)
             embedding = t.gather(0, abs_max_indices.view(1,-1)).squeeze()  
-            return [embedding], "_".join(s)
+            return [embedding], ["_".join(s)]
 
-        def _none(t, s):
-            return [emb for emb in t], s
+        def _none(t, s): 
+            tokens = s if isinstance(s, list) else [s]
+            return [emb for emb in t], tokens
 
 
         emb_positions = orig2tok[start:end+1]
@@ -125,7 +126,7 @@ class BertEmbedder(Embedder):
             "first":_first, "none":_none}.get(f_reduce, _mean)
         selected_features = [emb.tolist() for emb in embeddings[emb_start:emb_end]]
         t = torch.FloatTensor(selected_features)
-        embeddings, matched_tokens = reduction(t, tokens[emb_start:emb_end])    
+        embeddings, matched_tokens = reduction(t, tokens[emb_start:emb_end])  
 
         return embeddings, matched_tokens
 

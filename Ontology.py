@@ -2,13 +2,14 @@ import read
 from write import save_json, save_list, save_copy
 from embedders import glue_subtokens, BertEmbedder
 from collections import Counter, defaultdict
-from heuristics import string_match
+from heuristics import string_match, vote
 import torch
 import numpy as np
 import pandas as pd
 from sklearn import preprocessing
 from argparser import get_parser
 import faiss_index
+from os.path import join as jp
 
 
 class Ontology:
@@ -30,20 +31,20 @@ class Ontology:
     def __init__(
         self,
         version=4,
-        entities_path="data/ontology/ontology_entities.csv",
-        relations_path="data/ontology/ontology_relations.csv",
-        faiss_index_path="data/ontology/faiss/",
+        parent_path="data/ontology/",
+        entities_file_name="ontology_entities.csv",
+        relations_file_name="ontology_relations.csv",
+        faiss_dir="faiss/"
     ):
-        self.entities_path="data/ontology/v{}/ontology_entities.csv".format(version),
-        self.relations_path="data/ontology/v{}/ontology_relations.csv".format(version),
-        self.faiss_path="data/ontology/v{}/faiss/".format(version),
-        self.entities_path = entities_path
-        self.relations_path = relations_path
-        self.faiss_index_path = faiss_index_path
-        self.entities = read.read_ontology_entity_types(entities_path)
+        self.version = version
+        self.parent_path = jp(parent_path, "v{}/".format(version))
+        self.entities_file_name = entities_file_name
+        self.relations_file_name = relations_file_name
+        self.faiss_dir = faiss_dir
+        self.entities = read.read_ontology_entity_types(jp(self.parent_path, self.entities_file_name))
         self.entity_index, self.entity_table = None, None
         self.entity_types = None
-        self.relations = read.read_ontology_relation_types(relations_path)
+        self.relations = read.read_ontology_relation_types(jp(self.parent_path, self.relations_file_name))
         self.types = self.convert_ontology_types()
 
     def calculate_entity_embeddings(self, data_iterator, embedder, token_pooling="none", mention_pooling="none"):
@@ -80,12 +81,13 @@ class Ontology:
                 ontology_embeddings[full_term]["entries"].append(entry)
 
         # Check for existing index + table
-        self.entity_index, self.entity_table = faiss_index.load(self.faiss_path, "entities_T|{}|_M|{}|".format(
-            token_pooling, mention_pooling))
+        self.entity_index, self.entity_table = faiss_index.load(jp(self.parent_path, self.faiss_dir), 
+            token_pooling, mention_pooling, jp(self.parent_path, self.faiss_dir))
         if self.entity_index and self.entity_table:
             return self.entity_index, self.entity_table
         
-        print("Calculating ontology entity embeddings...")
+        print("Calculating ontology entity embeddings using |{}| token pooling and |{}| mention pooling...".format(
+            token_pooling, mention_pooling))
         self.entity_index = faiss_index.init(embedder.embedding_size)
         self.entity_table = []
         f_accumulation = {"mean":_accumulate_mean, "absmax":_accumulate_absmax, "max":_accumulate_max,
@@ -117,46 +119,49 @@ class Ontology:
         self.entity_index.add(data_norm)
         self.entity_table += entries
 
+        # Save
+        faiss_index.save(self.entity_index, self.entity_table, token_pooling, mention_pooling, jp(self.parent_path, self.faiss_dir))
+
         return self.entity_index, self.entity_table
 
 
     def fetch_entity(self, i):
         entity = self.entity_table[i]
         entity_string = entity.get("string")
+        entity_full_term = entity.get("full_term")
         entity_type = entity.get("type")
 
-        return entity_string, entity_type
+        return entity_type, entity_string, entity_full_term
 
 
-    def evaluate_entity_embeddings(self, data_iterator, embedder, f_reduce="mean"):
-        print("Calculating |{}| embedding similarity of identical strings...".format(f_reduce))
+    def evaluate_entity_embeddings(self, data_iterator, embedder, token_pooling="mean"):
+        print("Calculating |{}| embedding similarity of identical strings...".format(token_pooling))
         entity_similarity_scores = defaultdict(list)
         for sentence_subtokens, sentence_embeddings, _ in data_iterator.iter_sentences():
             glued_tokens, _, glued2tok = glue_subtokens(sentence_subtokens)
             string_matches, matched_strings = string_match(glued_tokens, self, embedder)
             for i, (start, end, type_) in enumerate(string_matches):
-                emb, emb_tokens = embedder.reduce_embeddings(sentence_embeddings, start, end, glued_tokens, glued2tok, f_reduce)
+                embeddings, emb_tokens = embedder.reduce_embeddings(sentence_embeddings, start, end, glued_tokens, glued2tok, token_pooling)
                 # print(glued_tokens)
                 entity_string = matched_strings[i]
-                mentioned_embedding = np.expand_dims(emb.numpy(), axis=0)
-                D, I = self.entity_index.search(mentioned_embedding, 1)
-                s, t = self.fetch_entity(I[0][0])
-                if entity_string==s:
-                    entity_similarity_scores[entity_string].append(int(D[0][0])) 
+                mentioned_embeddings = torch.stack(embeddings).numpy()
+                D, I = self.entity_index.search(mentioned_embeddings, 1)
+                t, vt, vs, vft = vote(D.reshape(len(D)), I.reshape(len(D)), self)
+                if entity_string in vft:
+                    entity_similarity_scores[entity_string].append(int(D.mean())) 
                 else:
-                    print(entity_string, s)
+                    print(entity_string, vft)
         
         entity_means = [np.array(v).mean() for k, v in entity_similarity_scores.items() if v]
         overall_mean = np.array(entity_means).mean()
-        filter_used = "filtered" if data_iterator.filter_sentences else "unfiltered" 
-        print("Average distance over all concepts for |{}| reduction |{}|: {:0.2f}".format(f_reduce, filter_used, overall_mean))
+        print("Average distance over all concepts for |{}| token pooling: {:0.2f}".format(token_pooling, overall_mean))
 
         return entity_similarity_scores
 
     def convert_ontology_types(self):
         types = {}
-        entities_df = pd.read_csv(self.entities_path)
-        relations_df = pd.read_csv(self.relations_path)
+        entities_df = pd.read_csv(jp(self.parent_path, self.entities_file_name))
+        relations_df = pd.read_csv(jp(self.parent_path, self.relations_file_name))
         types["entities"] = {type_:{"short": type_, "verbose": type_} for type_ in set(entities_df["Class"])}
         types["relations"] = {}
         for _, row in relations_df.iterrows():
@@ -172,15 +177,9 @@ class Ontology:
         self.entity_types = entity_types
         self.entity_types_map = entity_types_map
 
+        save_json(types, jp(self.parent_path, 'ontology_types.json'))
+
         return types
-
-
-    def save(self, output_path="data/ontology/", token_pooling="mean", mention_pooling="none"):
-        save_copy(self.entities_path, output_path+'ontology_entities.csv')
-        save_copy(self.relations_path, output_path+'ontology_relations.csv')
-        faiss_index.save(self.entity_index, self.entity_table, "entities_T|{}|_M|{}|".format(
-            token_pooling, mention_pooling), output_path+"faiss/")
-        save_json(self.types, output_path+'ontology_types.json')
 
 
 if __name__ == "__main__":

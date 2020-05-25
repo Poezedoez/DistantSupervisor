@@ -48,9 +48,11 @@ def evaluate_ontology_representations(v=4):
     data_path = "data/ScientificDocuments/"
     entities_path = "data/ontology/v{}/ontology_entities.csv".format(v)
     relations_path = "data/ontology/v{}/ontology_relations.csv".format(v)
+    ontology_save_path = "data/ontology/v{}/".format(v)
     results_path = "data/ontology/evaluation/v{}/".format(v)
     embedder = BertEmbedder('data/scibert_scivocab_cased')
-    pooling_functions = ["abs_max", "max", "mean", "none"]
+    token_pooling = ["absmax", "max", "mean", "none", "absmax", "max", "mean"]
+    mention_pooling = ["none", "none", "none", "none", "absmax", "max", "mean"]
 
     # Init train iterator
     selection = (0, 500)
@@ -69,13 +71,11 @@ def evaluate_ontology_representations(v=4):
     )
 
     results = {}
-    for p in pooling_functions:
-        save_path = "data/ontology/v{}/faiss/".format(v)
-        ontology = Ontology(entities_path, relations_path)
-        ontology.calculate_entity_embeddings(train_iterator, embedder, p)
-        similarity_scores = ontology.evaluate_entity_embeddings(eval_iterator, embedder, p)
-        ontology.save(results_path, p)
-        results[p] = similarity_scores
+    for tp, mp in zip(token_pooling, mention_pooling):
+        ontology = Ontology(v)
+        ontology.calculate_entity_embeddings(train_iterator, embedder, tp, mp)
+        similarity_scores = ontology.evaluate_entity_embeddings(eval_iterator, embedder, tp)
+        results["T|{}|M|{}|".format(tp, mp)] = similarity_scores
 
     save_json(results, results_path+'evaluation_scores.json')
 

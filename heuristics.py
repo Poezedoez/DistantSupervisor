@@ -84,17 +84,23 @@ def string_match(tokens, ontology, embedder, execute=True):
     return matches, matched_strings
 
 
+def vote(similarities, neighbors, ontology):
+    voter_types, voter_strings, full_terms = [], [], []
+    weight_counter = Counter()
+    for similarity, neighbor in zip(similarities, neighbors):
+        type_, string, full_term = ontology.fetch_entity(neighbor)
+        weight_counter[type_] += similarity
+        voter_types.append(type_)
+        voter_strings.append(string)
+        full_terms.append(full_term)
+    
+    voted_type = weight_counter.most_common(1)[0][0]
+
+    return voted_type, voter_types, voter_strings, full_terms
+
+
 def embedding_match(sentence_embeddings, sentence_subtokens, glued2tok, glued_tokens, 
                     ontology, embedder, execute=True, threshold=0.83, token_pooling="mean"):
-    def _vote(similarities, neighbors):
-        weight_counter = Counter()
-        for similarity, neighbor in zip(similarities, neighbors):
-            type_ = ontology.entity_table[neighbor]["type"]
-            string = ontology.entity_table[neighbor]["string"]
-            weight_counter[type_] += similarity
-
-        return weight_counter.most_common(1)[0][0]
-
     matches = []
     if not execute:
         return matches
@@ -130,7 +136,7 @@ def embedding_match(sentence_embeddings, sentence_subtokens, glued2tok, glued_to
         similarities = S[start:end]
         neighbors = I[start:end]
         tokens = all_tokens[start:end]
-        type_ = _vote(similarities, neighbors)
+        type_, _, _, _ = vote(similarities, neighbors, ontology)
         confidence = similarities.mean()
         if confidence > threshold:
             # print(nps[i], type_, confidence)
