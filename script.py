@@ -46,14 +46,11 @@ def noun_phrases(tokens):
 
 def evaluate_ontology_representations(v=4):
     data_path = "data/ScientificDocuments/"
-    entities_path = "data/ontology/v{}/ontology_entities.csv".format(v)
-    relations_path = "data/ontology/v{}/ontology_relations.csv".format(v)
-    ontology_save_path = "data/ontology/v{}/".format(v)
     results_path = "data/ontology/evaluation/v{}/".format(v)
     embedder = BertEmbedder('data/scibert_scivocab_cased')
     token_pooling = ["absmax", "max", "mean", "none", "absmax", "max", "mean"]
     mention_pooling = ["none", "none", "none", "none", "absmax", "max", "mean"]
-
+    
     # Init train iterator
     selection = (0, 500)
     train_iterator = DataIterator(

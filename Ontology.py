@@ -115,12 +115,13 @@ class Ontology:
             embeddings += [emb.tolist() for emb in d["embeddings"]]
             entries += d["entries"]
         data = np.array(embeddings, dtype="float32")
-        data_norm = preprocessing.normalize(data, norm="l2")    
+        data_norm = preprocessing.normalize(data, axis=1, norm="l2")    
         self.entity_index.add(data_norm)
         self.entity_table += entries
 
         # Save
-        faiss_index.save(self.entity_index, self.entity_table, token_pooling, mention_pooling, jp(self.parent_path, self.faiss_dir))
+        faiss_index.save(self.entity_index, self.entity_table, token_pooling, 
+            mention_pooling, jp(self.parent_path, self.faiss_dir))
 
         return self.entity_index, self.entity_table
 
@@ -135,28 +136,33 @@ class Ontology:
 
 
     def evaluate_entity_embeddings(self, data_iterator, embedder, token_pooling="mean"):
-        print("Calculating |{}| embedding similarity of identical strings...".format(token_pooling))
-        entity_similarity_scores = defaultdict(list)
+        print("Calculating |{}| embedding similarity of nearest concepts...".format(token_pooling))
+        type_similarity_scores = defaultdict(list)
+        self_extractions = 0
+        total = 0
         for sentence_subtokens, sentence_embeddings, _ in data_iterator.iter_sentences():
             glued_tokens, _, glued2tok = glue_subtokens(sentence_subtokens)
             string_matches, matched_strings = string_match(glued_tokens, self, embedder)
             for i, (start, end, type_) in enumerate(string_matches):
-                embeddings, emb_tokens = embedder.reduce_embeddings(sentence_embeddings, start, end, glued_tokens, glued2tok, token_pooling)
+                embeddings, emb_tokens = embedder.reduce_embeddings(sentence_embeddings, start, end, 
+                    glued_tokens, glued2tok, token_pooling)
                 # print(glued_tokens)
                 entity_string = matched_strings[i]
-                mentioned_embeddings = torch.stack(embeddings).numpy()
-                D, I = self.entity_index.search(mentioned_embeddings, 1)
+                q = torch.stack(embeddings).numpy()
+                q_norm = preprocessing.normalize(q, axis=1, norm="l2")
+                D, I = self.entity_index.search(q_norm, 1)
                 t, vt, vs, vft = vote(D.reshape(len(D)), I.reshape(len(D)), self)
                 if entity_string in vft:
-                    entity_similarity_scores[entity_string].append(int(D.mean())) 
-                else:
-                    print(entity_string, vft)
+                    self_extractions += 1
+                type_similarity_scores[type_].append(float(D.mean()))
+                total +=1
         
-        entity_means = [np.array(v).mean() for k, v in entity_similarity_scores.items() if v]
-        overall_mean = np.array(entity_means).mean()
+        print("{:.2f}% of entities had their own embeddings as the nearest neighbor".format(float(self_extractions)/total*100))
+        type_means = [np.array(v).mean() for k, v in type_similarity_scores.items() if v]
+        overall_mean = np.array(type_means).mean()
         print("Average distance over all concepts for |{}| token pooling: {:0.2f}".format(token_pooling, overall_mean))
 
-        return entity_similarity_scores
+        return type_similarity_scores
 
     def convert_ontology_types(self):
         types = {}
