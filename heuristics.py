@@ -139,7 +139,7 @@ def embedding_match(sentence_embeddings, sentence_subtokens, glued2tok, glued_to
         type_, _, _, _ = vote(similarities, neighbors, ontology)
         confidence = similarities.mean()
         if confidence > threshold:
-            print(nps[i], type_, confidence)
+            # print(nps[i], type_, confidence)
             matches.append((np_start, np_end, type_))  
 
     return matches

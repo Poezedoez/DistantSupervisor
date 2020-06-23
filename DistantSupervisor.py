@@ -15,14 +15,16 @@ from argparser import get_parser
 class DistantSupervisor:
     """
     Args:
-        ontology_entities_path (str): path to the ontology entities csv file
-        ontology_relations_path (str): path to the ontology relations csv file
-        entity_embedding_path (str): path to the precalculated entity embeddings of the ontology
         data_path (str): path to the folder of scientific documents containing
             named with document id's
+        ontology_path (str): path the parent directory of ontology files
+        tokenizer_path (str): path to tokenizer
         output_path (str): path to store results
         timestamp_given (bool): whether a time stamp is included in the output path
         cos_theta (float): similarity threshold for embedding labeling
+        filter_sentences (bool): whether to filter dirty sentences from the data
+        token_pooling (str): name of the pooling function for token embeddings
+        mention_pooling (str): name of the pooling function for mention embeddings
 
     Attr:
         ontology (Ontology): ontology with entities (+embeddings) and relations
@@ -41,16 +43,17 @@ class DistantSupervisor:
     def __init__(
         self,
         data_path="data/ScientificDocuments/",
-        ontology_version="4",
+        ontology_path="data/ontology/v4/",
+        tokenizer_path="data/scibert_scivocab_cased",
         output_path="data/DistantlySupervisedDatasets/",
         timestamp_given=False,
-        cos_theta=0.83,
+        cos_theta=0.80,
         filter_sentences=True,
         token_pooling="mean",
         mention_pooling="mean"
     ):
-        self.ontology = Ontology(ontology_version)
-        self.embedder = BertEmbedder('data/scibert_scivocab_cased')
+        self.ontology = Ontology(ontology_path)
+        self.embedder = BertEmbedder(tokenizer_path)
         self.timestamp = '' if timestamp_given else time.strftime("%Y%m%d-%H%M%S")+'/'
         self.data_path = data_path
         self.filter_sentences = filter_sentences
@@ -80,8 +83,7 @@ class DistantSupervisor:
 
         # Ready ontology embeddings
         if label_strategy > 0:
-            if not self.ontology.entity_index:
-                self.ontology.calculate_entity_embeddings(iterator, self.embedder, self.token_pooling, self.mention_pooling)
+            self.ontology.calculate_entity_embeddings(iterator, self.embedder, self.token_pooling, self.mention_pooling)
                 
         # Supervise sentences        
         for sentence_subtokens, sentence_embeddings, doc_name in iterator.iter_sentences():
@@ -111,9 +113,6 @@ class DistantSupervisor:
             # Save pretty output of labeled examples
             print_dataset(dataset_path, self.output_path+'{}/classified_examples.txt'.format(label_function))
 
-        # Save ontology used
-        self.ontology.save(self.output_path, self.token_pooling, self.mention_pooling)
-
         # Save list of selected documents used for the split
         save_list(self.flist, self.output_path+'filelist.txt')
 
@@ -127,6 +126,7 @@ class DistantSupervisor:
         global_statistics = {}
         global_statistics["sentences_processed"] = 0
         global_statistics["cos_theta"] = self.cos_theta
+        global_statistics["ontology_path"] = self.ontology.parent_path
 
         return {dataset: copy.deepcopy(label_statistics) for dataset in self.datasets}, global_statistics
 
@@ -219,6 +219,15 @@ class DistantSupervisor:
 if __name__ == "__main__":
     parser = get_parser()
     args = parser.parse_args()
-    supervisor = DistantSupervisor(args.data_path, args.ontology_version, args.output_path, args.timestamp_given, 
-                                   args.cos_theta, args.filter_sentences, args.f_reduce)
+    supervisor = DistantSupervisor(
+        data_path=args.data_path, 
+        ontology_path=args.ontology_path, 
+        output_path=args.output_path, 
+        timestamp_given=args.timestamp_given, 
+        cos_theta=args.cos_theta, 
+        filter_sentences=args.filter_sentences, 
+        token_pooling=args.token_pooling,
+        mention_pooling=args.mention_pooling
+    )
+
     supervisor.supervise(label_strategy=args.label_strategy, selection=tuple(args.selection))

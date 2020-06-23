@@ -15,8 +15,9 @@ from os.path import join as jp
 class Ontology:
     """
     Args:
-        entities_path (str): path to the ontology entities csv file
-        relations_path (str): path to the ontology relations csv file
+        parent_path (str): path to the parent directory of the ontology files
+        entities_file_name (str): name of the 
+        relations_file_name (str): path to the ontology relations csv file
         faiss_index_path (str): path to the folder with faiss index and table
 
     Attr:
@@ -25,19 +26,30 @@ class Ontology:
         faiss_index_path (str): path to the folder with faiss index and table
         entity_index (Faiss index): faiss index with ontology entity embeddings
         entity_table (array): ordered table with embedding properties
+
+
+    Ontology will look for files in the following locations:
+
+        @parent_path + @entity_file_name
+        @parent_path + @relation_file_name
+        @parent_path + @faiss_dir
+
+        e.g.
+        data/ontology/v4/ + ontology_entities.csv
+        data/ontology/v4/ + ontology_relations.csv
+        data/ontology/v4/ + faiss/
         
     """
 
+
     def __init__(
         self,
-        version=4,
-        parent_path="data/ontology/",
+        parent_path,
         entities_file_name="ontology_entities.csv",
         relations_file_name="ontology_relations.csv",
         faiss_dir="faiss/"
     ):
-        self.version = version
-        self.parent_path = jp(parent_path, "v{}/".format(version))
+        self.parent_path = parent_path
         self.entities_file_name = entities_file_name
         self.relations_file_name = relations_file_name
         self.faiss_dir = faiss_dir
@@ -48,6 +60,7 @@ class Ontology:
         self.types = self.convert_ontology_types()
 
     def calculate_entity_embeddings(self, data_iterator, embedder, token_pooling="none", mention_pooling="none"):
+
         def _accumulate_mean(embedding, tokens, full_term, type_, ontology_embeddings):
             entry = {"type": type_, "string": tokens[0], "full_term": full_term}
             embedding = torch.stack(embeddings).mean()
