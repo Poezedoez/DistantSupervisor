@@ -14,6 +14,6 @@ Example script:
 
 ```sh
 $ chmod +x scripts/run.sh
-& ./scripts/run.sh
+$ ./scripts/run.sh
 ```
 
