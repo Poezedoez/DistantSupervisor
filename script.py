@@ -129,8 +129,26 @@ def context_consistency_scores(v=42, f_reduce="mean", filtered=True):
 
     save_json(context_consistency_scores, results_path+'v{}_context_consistency_scores.json'.format(v))
 
+
+def merge_annotated_sets():
+    parent_path = "data/annotation/annotated/"
+    p1 = parent_path+"10_annotated_seed31.json"
+    p2 = parent_path+"20_annotated_seed42.json"
+    p3 = parent_path+"20_annotated_seed45.json"
+    output_path = parent_path+"50_annotated_combined_31_42_45.json"
+
+    d1 = json.load(open(p1))
+    d2 = json.load(open(p2))
+    d3 = json.load(open(p3))
+
+    merged = d1+d2+d3
+
+    with open(output_path, 'w', encoding='utf-8') as f:
+        json.dump(merged, f)
+
 if __name__ == "__main__":
-    evaluate_ontology_representations()
+    merge_annotated_sets()
+    # evaluate_ontology_representations()
     # context_consistency_scores()
 
 
