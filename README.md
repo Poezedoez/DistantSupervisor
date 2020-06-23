@@ -7,11 +7,7 @@ Distant Supervisor is the main class that uses:
     * labeling functions in heuristics.py for distant supervision
 
 Example script:
-    `
-    chmod +x scripts/run.sh
-    `
+    `chmod +x scripts/run.sh`
     
-    `
-    ./scripts/run.sh
-    `
+    `./scripts/run.sh`
 
