@@ -170,10 +170,11 @@ class Ontology:
                 type_similarity_scores[type_].append(float(D.mean()))
                 total +=1
         
-        print("{:.2f}% of entities had their own embeddings as the nearest neighbor".format(float(self_extractions)/total*100))
+        percent_self_extractions = float(self_extractions)/total*100 if total else 0
+        print("{:.2f}% of entities had their own embeddings as the nearest neighbor".format(percent_self_extractions))
         type_means = [np.array(v).mean() for k, v in type_similarity_scores.items() if v]
         overall_mean = np.array(type_means).mean()
-        print("Average distance over all concepts for |{}| token pooling: {:0.2f}".format(token_pooling, overall_mean))
+        print("Average distance over all concepts for |{}| token pooling: {:0.2f} \n".format(token_pooling, overall_mean))
 
         return type_similarity_scores
 

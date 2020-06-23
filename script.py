@@ -44,9 +44,11 @@ def noun_phrases(tokens):
 
     return noun_phrases, spans
 
-def evaluate_ontology_representations(v=4):
+def evaluate_ontology_representations():
+    version = 4
+    ontology_path = "data/ontology/v{}/".format(version)
     data_path = "data/ScientificDocuments/"
-    results_path = "data/ontology/evaluation/v{}/".format(v)
+    results_path = "data/ontology/evaluation/v{}/".format(version)
     embedder = BertEmbedder('data/scibert_scivocab_cased')
     token_pooling = ["absmax", "max", "mean", "none", "absmax", "max", "mean"]
     mention_pooling = ["none", "none", "none", "none", "absmax", "max", "mean"]
@@ -69,7 +71,7 @@ def evaluate_ontology_representations(v=4):
 
     results = {}
     for tp, mp in zip(token_pooling, mention_pooling):
-        ontology = Ontology(v)
+        ontology = Ontology(ontology_path)
         ontology.calculate_entity_embeddings(train_iterator, embedder, tp, mp)
         similarity_scores = ontology.evaluate_entity_embeddings(eval_iterator, embedder, tp)
         results["T|{}|M|{}|".format(tp, mp)] = similarity_scores
@@ -147,12 +149,7 @@ def merge_annotated_sets():
         json.dump(merged, f)
 
 if __name__ == "__main__":
-<<<<<<< HEAD
     evaluate_ontology_representations()
-=======
-    merge_annotated_sets()
-    # evaluate_ontology_representations()
->>>>>>> token
     # context_consistency_scores()
 
 
