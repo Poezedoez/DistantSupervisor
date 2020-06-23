@@ -2,181 +2,203 @@ import read
 from write import save_json, save_list, save_copy
 from embedders import glue_subtokens, BertEmbedder
 from collections import Counter, defaultdict
-from heuristics import string_match
+from heuristics import string_match, vote
 import torch
 import numpy as np
 import pandas as pd
-from sklearn.metrics.pairwise import cosine_similarity
+from sklearn import preprocessing
 from argparser import get_parser
+import faiss_index
+from os.path import join as jp
 
 
 class Ontology:
     """
     Args:
-        entities_path (str): path to the ontology entities csv file
-        relations_path (str): path to the ontology relations csv file
-        entity_embedding_path (str): path to the precalculated entity embeddings of the ontology
+        parent_path (str): path to the parent directory of the ontology files
+        entities_file_name (str): name of the 
+        relations_file_name (str): path to the ontology relations csv file
+        faiss_index_path (str): path to the folder with faiss index and table
 
     Attr:
         ontology_entities (dict): ontology loaded with json from the given path
         ontology_relations (dict): ontology loaded with json from the given path
-        entity_embedding_path (str): stored entity embedding path from init argument
-        embedding_array (dict): dict of instance embeddings stacked for one entity type
+        faiss_index_path (str): path to the folder with faiss index and table
+        entity_index (Faiss index): faiss index with ontology entity embeddings
+        entity_table (array): ordered table with embedding properties
+
+
+    Ontology will look for files in the following locations:
+
+        @parent_path + @entity_file_name
+        @parent_path + @relation_file_name
+        @parent_path + @faiss_dir
+
+        e.g.
+        data/ontology/v4/ + ontology_entities.csv
+        data/ontology/v4/ + ontology_relations.csv
+        data/ontology/v4/ + faiss/
         
     """
 
+
     def __init__(
         self,
-        entities_path="data/ontology/ontology_entities.csv",
-        relations_path="data/ontology/ontology_relations.csv",
-        entity_embedding_path="data/ontology/entity_embeddings.json",
+        parent_path,
+        entities_file_name="ontology_entities.csv",
+        relations_file_name="ontology_relations.csv",
+        faiss_dir="faiss/"
     ):
-
-        self.entities_path = entities_path
-        self.relations_path = relations_path
-        self.entity_embedding_path = entity_embedding_path
-        self.entities = read.read_ontology_entity_types(entities_path)
-        self.entity_embeddings = read.read_entity_embeddings(entity_embedding_path)
-        self.embedding_array, self.array2entity = self.embeddings_to_array()
-        self.relations = read.read_ontology_relation_types(relations_path)
+        self.parent_path = parent_path
+        self.entities_file_name = entities_file_name
+        self.relations_file_name = relations_file_name
+        self.faiss_dir = faiss_dir
+        self.entities = read.read_ontology_entity_types(jp(self.parent_path, self.entities_file_name))
+        self.entity_index, self.entity_table = None, None
+        self.entity_types = None
+        self.relations = read.read_ontology_relation_types(jp(self.parent_path, self.relations_file_name))
         self.types = self.convert_ontology_types()
-        
-            
-    def calculate_entity_embeddings(self, data_iterator, embedder, f_reduce="mean"):
-        def _accumulate_mean(embedding, entity_string, entity_embeddings):
-            entity_embeddings[entity_string]["embedding"] += embedding
-            entity_embeddings[entity_string]["count"] += 1
 
-        def _accumulate_max(embedding, entity_string, entity_embeddings):
-            ontology_embedding = entity_embeddings[entity_string]["embedding"]
-            t = torch.stack([embedding]+[ontology_embedding])
-            max_embedding, _ = t.max(dim=0)
-            entity_embeddings[entity_string]["embedding"] = max_embedding
-            entity_embeddings[entity_string]["count"] += 1
+    def calculate_entity_embeddings(self, data_iterator, embedder, token_pooling="none", mention_pooling="none"):
 
-        def _accumulate_absmax(embedding, entity_string, entity_embeddings):
-            ontology_embedding = entity_embeddings[entity_string]["embedding"]
-            t = torch.stack([embedding]+[ontology_embedding])
+        def _accumulate_mean(embedding, tokens, full_term, type_, ontology_embeddings):
+            entry = {"type": type_, "string": tokens[0], "full_term": full_term}
+            embedding = torch.stack(embeddings).mean()
+            old_mean = ontology_embeddings[full_term]["embeddings"][0]
+            n = ontology_embedding = ontology_embeddings[full_term]["count"]
+            new_mean = old_mean + ((embedding-old_mean)/n)
+            ontology_embeddings[full_term]["embeddings"][0] = new_mean
+            ontology_embeddings[full_term]["entries"][0] = entry
+
+        def _accumulate_max(embedding, tokens, full_term, type_, ontology_embeddings):
+            entry = {"type": type_, "string": tokens[0], "full_term": full_term}
+            old_max = ontology_embeddings[full_term]["embeddings"][0]
+            t = torch.stack(embeddings+[old_max])
+            new_max, _ = t.max(dim=0)
+            ontology_embeddings[full_term]["embeddings"][0] = new_max
+            ontology_embeddings[full_term]["entries"][0] = entry
+
+        def _accumulate_absmax(embedding, tokens, full_term, type_, ontology_embeddings):
+            entry = {"type": type_, "string": tokens[0], "full_term": full_term}
+            old_absmax = ontology_embeddings[full_term]["embeddings"][0]
+            t = torch.stack(embeddings+[old_absmax])
             abs_max_indices = torch.abs(t).argmax(dim=0)
-            absmax_embedding = t.gather(0, abs_max_indices.view(1,-1)).squeeze()
-            entity_embeddings[entity_string]["embedding"] = absmax_embedding
-            entity_embeddings[entity_string]["count"] += 1
+            new_absmax = t.gather(0, abs_max_indices.view(1,-1)).squeeze()
+            ontology_embeddings[full_term]["embeddings"][0] = new_absmax
+            ontology_embeddings[full_term]["entries"][0] = entry
 
-        print("Calculating ontology entity embeddings...")
-        entity_embeddings = {token: {"embedding": torch.zeros(embedder.embedding_size), "count": 0}  for token in self.entities}
+        def _accumulate_none(embedding, tokens, full_term, type_, ontology_embeddings):
+            for embedding, token in zip(embeddings, tokens):
+                entry = {"type": type_, "string": token, "full_term": full_term}
+                ontology_embeddings[full_term]["embeddings"].append(embedding)
+                ontology_embeddings[full_term]["entries"].append(entry)
+
+        # Check for existing index + table
+        self.entity_index, self.entity_table = faiss_index.load(jp(self.parent_path, self.faiss_dir), 
+            token_pooling, mention_pooling, jp(self.parent_path, self.faiss_dir))
+        if self.entity_index and self.entity_table:
+            return self.entity_index, self.entity_table
+        
+        print("Calculating ontology entity embeddings using |{}| token pooling and |{}| mention pooling...".format(
+            token_pooling, mention_pooling))
+        self.entity_index = faiss_index.init(embedder.embedding_size)
+        self.entity_table = []
+        f_accumulation = {"mean":_accumulate_mean, "absmax":_accumulate_absmax, "max":_accumulate_max,
+            "none": _accumulate_none}
+        zeros = torch.zeros(embedder.embedding_size)
+        zeros_entry = {"type": "null", "string": "null"}
+        ontology_embeddings = defaultdict(lambda : {"embeddings":[zeros], "entries":[zeros_entry], "count": 0})
+
+        # Accumulate entity embeddings
         for sentence_subtokens, sentence_embeddings, _ in data_iterator.iter_sentences():
             glued_tokens, _, glued2tok = glue_subtokens(sentence_subtokens)
             string_matches, matched_strings = string_match(glued_tokens, self, embedder)
-            for i, (start, end, type_) in enumerate(string_matches):
-                emb, emb_tokens = embedder.reduce_embeddings(sentence_embeddings, start, end, glued_tokens, glued2tok, f_reduce)
+            for i, (span_start, span_end, type_) in enumerate(string_matches):
+                embeddings, matched_tokens = embedder.reduce_embeddings(sentence_embeddings, 
+                    span_start, span_end, sentence_subtokens, glued2tok, token_pooling)
                 entity_string = matched_strings[i]
-                assert(entity_string in self.entities) # sanity check
-                f_accumulation = {"mean":_accumulate_mean, "abs_max":_accumulate_absmax, "max":_accumulate_max}
-                f_accumulation.get(f_reduce)(emb, entity_string, entity_embeddings)
+                ontology_embeddings[entity_string]["count"] += 1
+                f_accumulation.get(mention_pooling)(embeddings, matched_tokens, entity_string, 
+                    type_, ontology_embeddings) 
 
-        # Convert to list (and average in case of mean reduction)
-        for entity, entry in entity_embeddings.items():
-            embedding, count = entry["embedding"], entry["count"]
-            if f_reduce == "mean":
-                embedding = embedding / count if count else torch.zeros(embedder.embedding_size)
-            entity_embeddings[entity]["embedding"] = embedding.tolist()
-
-        self.entity_embeddings = entity_embeddings
-
-        return entity_embeddings
-    
-
-    def embeddings_to_array(self, null_shape=768):
-        if not self.entity_embeddings:
-            return None, None
-        
-        array2entity = []
+        # Index entities
         embeddings = []
-        
-        # Backwards compatibility :)
-        try:
-            for entity in self.entities:
-                entry = self.entity_embeddings.get(entity, entity)
-                embedding = entry.get("embedding", np.zeros(null_shape))
-                embeddings.append(embedding)
-                # self.entity_embeddings[entity]["embedding"] = embedding
-                self.entities[entity]["count"] = entry.get("count", 0)
-                array2entity.append(entity)
-        except:
-            print("attack of the guerilla monkeys")
-            print("old entity embedding format found, converting...")
-            flattened_entity_embeddings = {token: v for _, token_dict  in self.entity_embeddings.items() 
-                                            for token, v in token_dict.items()}
-            print(flattened_entity_embeddings.keys())
-            self.entity_embeddings = {token: {"embedding": torch.zeros(null_shape), "count": 0}  
-                                      for token in self.entities}
-            for entity in self.entities:
-                embedding = flattened_entity_embeddings.get(entity, np.zeros(null_shape))
-                self.entity_embeddings[entity]["embedding"] = embedding
-                embeddings.append(embedding)
-                self.entities[entity]["count"] = 0
-                self.entity_embeddings[entity]["count"] = 0
-                array2entity.append(entity)
+        entries = []
+        for d in ontology_embeddings.values():
+            embeddings += [emb.tolist() for emb in d["embeddings"]]
+            entries += d["entries"]
+        data = np.array(embeddings, dtype="float32")
+        data_norm = preprocessing.normalize(data, axis=1, norm="l2")    
+        self.entity_index.add(data_norm)
+        self.entity_table += entries
 
-        # Use numpy array for sklearn cosine similarity
-        embedding_array = np.stack(embeddings)
-        self.embedding_array = embedding_array
-        self.array2entity = array2entity
-        
-        return embedding_array, array2entity
+        # Save
+        faiss_index.save(self.entity_index, self.entity_table, token_pooling, 
+            mention_pooling, jp(self.parent_path, self.faiss_dir))
+
+        return self.entity_index, self.entity_table
 
 
     def fetch_entity(self, i):
-        entity_string = self.array2entity[i]
-        entity = self.entities.get(entity_string, {})
-        type_ = entity.get("type", None)
-        count = entity.get("count", -1)
+        entity = self.entity_table[i]
+        entity_string = entity.get("string")
+        entity_full_term = entity.get("full_term")
+        entity_type = entity.get("type")
 
-        return entity_string, type_, count
+        return entity_type, entity_string, entity_full_term
 
 
-    def evaluate_entity_embeddings(self, data_iterator, embedder, f_reduce="mean"):
-        print("Calculating |{}| embedding similarity of identical strings...".format(f_reduce))
-        entity_similarity_scores = defaultdict(list)
+    def evaluate_entity_embeddings(self, data_iterator, embedder, token_pooling="mean"):
+        print("Calculating |{}| embedding similarity of nearest concepts...".format(token_pooling))
+        type_similarity_scores = defaultdict(list)
+        self_extractions = 0
+        total = 0
         for sentence_subtokens, sentence_embeddings, _ in data_iterator.iter_sentences():
             glued_tokens, _, glued2tok = glue_subtokens(sentence_subtokens)
             string_matches, matched_strings = string_match(glued_tokens, self, embedder)
             for i, (start, end, type_) in enumerate(string_matches):
-                emb, emb_tokens = embedder.reduce_embeddings(sentence_embeddings, start, end, glued_tokens, glued2tok, f_reduce)
+                embeddings, emb_tokens = embedder.reduce_embeddings(sentence_embeddings, start, end, 
+                    glued_tokens, glued2tok, token_pooling)
                 # print(glued_tokens)
                 entity_string = matched_strings[i]
-                ontology_embedding = np.expand_dims(np.array(self.entity_embeddings[entity_string]["embedding"]), axis=0)
-                mentioned_embedding = np.expand_dims(emb.numpy(), axis=0)
-                score = cosine_similarity(mentioned_embedding, ontology_embedding)[0][0]
-                # print(entity_string, score)
-                entity_similarity_scores[entity_string].append(score)
-                assert(entity_string in self.entities) # sanity check
+                q = torch.stack(embeddings).numpy()
+                q_norm = preprocessing.normalize(q, axis=1, norm="l2")
+                D, I = self.entity_index.search(q_norm, 1)
+                t, vt, vs, vft = vote(D.reshape(len(D)), I.reshape(len(D)), self)
+                if entity_string in vft:
+                    self_extractions += 1
+                type_similarity_scores[type_].append(float(D.mean()))
+                total +=1
         
-        entity_means = [np.array(v).mean() for k, v in entity_similarity_scores.items() if v]
-        overall_mean = np.array(entity_means).mean()
-        filter_used = "filtered" if data_iterator.filter_sentences else "unfiltered" 
-        print("Similarity score over all concepts for |{}| reduction |{}|: {:0.2f}".format(f_reduce, filter_used, overall_mean))
+        print("{:.2f}% of entities had their own embeddings as the nearest neighbor".format(float(self_extractions)/total*100))
+        type_means = [np.array(v).mean() for k, v in type_similarity_scores.items() if v]
+        overall_mean = np.array(type_means).mean()
+        print("Average distance over all concepts for |{}| token pooling: {:0.2f}".format(token_pooling, overall_mean))
 
-        return entity_similarity_scores
+        return type_similarity_scores
 
     def convert_ontology_types(self):
         types = {}
-        entities_df = pd.read_csv(self.entities_path)
-        relations_df = pd.read_csv(self.relations_path)
+        entities_df = pd.read_csv(jp(self.parent_path, self.entities_file_name))
+        relations_df = pd.read_csv(jp(self.parent_path, self.relations_file_name))
         types["entities"] = {type_:{"short": type_, "verbose": type_} for type_ in set(entities_df["Class"])}
         types["relations"] = {}
         for _, row in relations_df.iterrows():
             type_ = row["relation"]
             types["relations"][type_] = {"short": type_, "verbose": type_, "symmetric":row["symmetric"]}
         
+        entity_types = {}
+        entity_types_map = []
+        for i, entry in enumerate(types["entities"]):
+            types[entry] = i
+            entity_types_map.append(entry)
+
+        self.entity_types = entity_types
+        self.entity_types_map = entity_types_map
+
+        save_json(types, jp(self.parent_path, 'ontology_types.json'))
+
         return types
-
-
-    def save(self, output_path):
-        save_copy(self.entities_path, output_path+'ontology_entities.csv')
-        save_copy(self.relations_path, output_path+'ontology_relations.csv')
-        save_json(self.entity_embeddings, output_path+'entity_embeddings.json')
-        save_json(self.types, output_path+'ontology_types.json')
 
 
 if __name__ == "__main__":

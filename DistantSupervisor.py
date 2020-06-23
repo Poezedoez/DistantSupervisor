@@ -15,14 +15,16 @@ from argparser import get_parser
 class DistantSupervisor:
     """
     Args:
-        ontology_entities_path (str): path to the ontology entities csv file
-        ontology_relations_path (str): path to the ontology relations csv file
-        entity_embedding_path (str): path to the precalculated entity embeddings of the ontology
         data_path (str): path to the folder of scientific documents containing
             named with document id's
+        ontology_path (str): path the parent directory of ontology files
+        tokenizer_path (str): path to tokenizer
         output_path (str): path to store results
         timestamp_given (bool): whether a time stamp is included in the output path
         cos_theta (float): similarity threshold for embedding labeling
+        filter_sentences (bool): whether to filter dirty sentences from the data
+        token_pooling (str): name of the pooling function for token embeddings
+        mention_pooling (str): name of the pooling function for mention embeddings
 
     Attr:
         ontology (Ontology): ontology with entities (+embeddings) and relations
@@ -41,21 +43,22 @@ class DistantSupervisor:
     def __init__(
         self,
         data_path="data/ScientificDocuments/",
-        ontology_entities_path="data/ontology/ontology_entities.csv",
-        ontology_relations_path="data/ontology/ontology_relations.csv",
-        entity_embedding_path="data/ontology/entity_embeddings.json",
+        ontology_path="data/ontology/v4/",
+        tokenizer_path="data/scibert_scivocab_cased",
         output_path="data/DistantlySupervisedDatasets/",
         timestamp_given=False,
-        cos_theta=0.83,
+        cos_theta=0.80,
         filter_sentences=True,
-        f_reduce="mean"
+        token_pooling="mean",
+        mention_pooling="mean"
     ):
-        self.ontology = Ontology(ontology_entities_path, ontology_relations_path, entity_embedding_path)
-        self.embedder = BertEmbedder('data/scibert_scivocab_cased')
+        self.ontology = Ontology(ontology_path)
+        self.embedder = BertEmbedder(tokenizer_path)
         self.timestamp = '' if timestamp_given else time.strftime("%Y%m%d-%H%M%S")+'/'
         self.data_path = data_path
         self.filter_sentences = filter_sentences
-        self.f_reduce = f_reduce
+        self.token_pooling = token_pooling
+        self.mention_pooling = mention_pooling
         self.output_path = output_path + self.timestamp
         self.cos_theta = cos_theta
         self.flist = set()
@@ -80,9 +83,7 @@ class DistantSupervisor:
 
         # Ready ontology embeddings
         if label_strategy > 0:
-            if not self.ontology.entity_embeddings:
-                self.ontology.calculate_entity_embeddings(iterator, self.embedder, self.f_reduce)
-            self.ontology.embeddings_to_array()
+            self.ontology.calculate_entity_embeddings(iterator, self.embedder, self.token_pooling, self.mention_pooling)
                 
         # Supervise sentences        
         for sentence_subtokens, sentence_embeddings, doc_name in iterator.iter_sentences():
@@ -112,9 +113,6 @@ class DistantSupervisor:
             # Save pretty output of labeled examples
             print_dataset(dataset_path, self.output_path+'{}/classified_examples.txt'.format(label_function))
 
-        # Save ontology used
-        self.ontology.save(self.output_path)
-
         # Save list of selected documents used for the split
         save_list(self.flist, self.output_path+'filelist.txt')
 
@@ -128,6 +126,7 @@ class DistantSupervisor:
         global_statistics = {}
         global_statistics["sentences_processed"] = 0
         global_statistics["cos_theta"] = self.cos_theta
+        global_statistics["ontology_path"] = self.ontology.parent_path
 
         return {dataset: copy.deepcopy(label_statistics) for dataset in self.datasets}, global_statistics
 
@@ -165,8 +164,8 @@ class DistantSupervisor:
         # Find embedding entity matches
         do_embedding_matching = (label_function == 1 or label_function == 2)
         embedding_matches = embedding_match(sentence_embeddings, sentence_subtokens, glued2tok, glued_tokens, 
-                                            self.ontology, self.embedder, do_embedding_matching, 
-                                            threshold=self.cos_theta, f_reduce=self.f_reduce)
+            self.ontology, self.embedder, do_embedding_matching, threshold=self.cos_theta, 
+            token_pooling=self.token_pooling)
         embedding_entities = label_entities(embedding_matches)
         embedding_relations = label_relations(embedding_entities)
 
@@ -220,7 +219,15 @@ class DistantSupervisor:
 if __name__ == "__main__":
     parser = get_parser()
     args = parser.parse_args()
-    supervisor = DistantSupervisor(args.data_path, args.ontology_entities_path, args.ontology_relations_path,
-                                   args.entity_embedding_path, args.output_path, args.timestamp_given, 
-                                   args.cos_theta, args.filter_sentences, args.f_reduce)
+    supervisor = DistantSupervisor(
+        data_path=args.data_path, 
+        ontology_path=args.ontology_path, 
+        output_path=args.output_path, 
+        timestamp_given=args.timestamp_given, 
+        cos_theta=args.cos_theta, 
+        filter_sentences=args.filter_sentences, 
+        token_pooling=args.token_pooling,
+        mention_pooling=args.mention_pooling
+    )
+
     supervisor.supervise(label_strategy=args.label_strategy, selection=tuple(args.selection))

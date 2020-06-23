@@ -52,6 +52,7 @@ def print_statistics(path):
         stats = json.load(json_file)
 
     print("--- STATISTICS ---")
+    print("Ontology path used: {}".format(stats["ontology_path"]))
     print("Label function: {}".format([stats["label_function"]]))
     print("Threshold on embedding cosine similarity (cos_theta):", stats["cos_theta"])
     print("Processed {} sentences of which {} contained at least one entity".format(
@@ -135,7 +136,7 @@ def save_json(json_object, output_path):
 
 def save_list(l, output_path):
     create_dir(output_path)
-    with open(output_path + 'filelist.txt', 'w', encoding='utf-8') as txt_file:
+    with open(output_path, 'w', encoding='utf-8') as txt_file:
         for item in l:
             txt_file.write("{} \n".format(item))
 
@@ -175,7 +176,10 @@ def plot(cos_thetas, run_date="21_03_2020_11_51_28", set_="test", averaging="mic
     plt.savefig("data/{}/plot_embedding_labeling_{}.png".format(run_date, averaging), dpi=720)
 
 if __name__ == "__main__":
-    in_path = 'data/DistantlySupervisedDatasets/26_03_2020_09_04_56/train/embedding_labeling/dataset.json'
-    ontology_path = "data/ontology_entities.csv"
-    write_entities_without_duplicates(ontology_path, in_path)
+    # in_path = 'data/DistantlySupervisedDatasets/26_03_2020_09_04_56/train/embedding_labeling/dataset.json'
+    # ontology_path = "data/ontology_entities.csv"
+    # write_entities_without_duplicates(ontology_path, in_path)
+    annotated_path = "data/annotation/annotated/50_annotated_combined_31_42_45.json"
+    print_dataset(annotated_path, "data/annotation/annotated/annotated_dataset.txt")
+
 

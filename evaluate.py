@@ -161,18 +161,10 @@ def evaluate(gt_path, pred_path):
 
     return ner_eval
 
-def evaluate_ontology_embeddings(ontology_embeddings_path, data_path, selection=(500, 900)):
-    with open(ontology_embeddings_path, 'r', encoding='utf-8') as json_file:
-        ontology_embeddings = json.load(json_file)
-
-    
-
 
 if __name__ == "__main__":
-    # parser = argparse.ArgumentParser(description='Evaluate spert json formatted dataset')
-    # parser.add_argument('gt_path', type=str, help='path to the ground truth dataset.json file')
-    # parser.add_argument('pred_path', type=str, help='path to the predicted dataset.json file')
-    # args = parser.parse_args()
-    # evaluate(args.gt_path, args.pred_path)
-    evaluate_ontology_embeddings()
-    
+    parser = argparse.ArgumentParser(description='Evaluate spert json formatted dataset')
+    parser.add_argument('gt_path', type=str, help='path to the ground truth dataset.json file')
+    parser.add_argument('pred_path', type=str, help='path to the predicted dataset.json file')
+    args = parser.parse_args()
+    evaluate(args.gt_path, args.pred_path)

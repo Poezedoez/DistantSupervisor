@@ -95,32 +95,40 @@ class BertEmbedder(Embedder):
         return tok_to_orig_index, orig_to_tok_index
 
 
-    def reduce_embeddings(self, embeddings, start, end, original_tokens, 
+    def reduce_embeddings(self, embeddings, start, end, tokens, 
                           orig2tok, f_reduce="mean"):
-        def _mean(t):
+        def _first(t, s):
+            return t[0], [s[0]]
+
+        def _mean(t, s):
             embedding = t.mean(dim=0)
-            return embedding
+            return [embedding], ["_".join(s)]
 
-        def _max(t):
+        def _max(t, s):
             embedding, _ = t.max(dim=0)
-            return embedding
+            return [embedding], ["_".join(s)]
 
-        def _abs_max(t):
+        def _absmax(t, s):
             abs_max_indices = torch.abs(t).argmax(dim=0)
             embedding = t.gather(0, abs_max_indices.view(1,-1)).squeeze()  
-            return embedding
+            return [embedding], ["_".join(s)]
+
+        def _none(t, s): 
+            tokens = s if isinstance(s, list) else [s]
+            return [emb for emb in t], tokens
+
 
         emb_positions = orig2tok[start:end+1]
         if len(emb_positions) == 1:  # last token in sentence
             emb_positions.append(emb_positions[-1]+1)
         emb_start, emb_end = emb_positions[0], emb_positions[-1]
-        reduction = {"mean":_mean, "max": _max, "abs_max":_abs_max}.get(f_reduce)
+        reduction = {"mean":_mean, "max": _max, "absmax":_absmax, 
+            "first":_first, "none":_none}.get(f_reduce, _mean)
         selected_features = [emb.tolist() for emb in embeddings[emb_start:emb_end]]
         t = torch.FloatTensor(selected_features)
-        embedding = reduction(t)  
-        matched_tokens = original_tokens[start:end]   
+        embeddings, matched_tokens = reduction(t, tokens[emb_start:emb_end])  
 
-        return embedding, matched_tokens
+        return embeddings, matched_tokens
 
 
     def __repr__(self):

@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=distantly_supervised_dataset
+#SBATCH --job-name=DSD_combined_labeling
 #SBATCH --time=12:00:00
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=16
@@ -18,7 +18,7 @@ source activate lisaenv
 cp -r $HOME/distantly-supervised-dataset/ $TMPDIR
 cd $TMPDIR/distantly-supervised-dataset
 
-COS_THETA=0.83
+COS_THETA=132
 COMBINED_LABELING=2
 V=4
 ENT_PATH="data/ontology/v${V}_ontology_entities.csv" 

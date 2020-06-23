@@ -46,46 +46,37 @@ def noun_phrases(tokens):
 
 def evaluate_ontology_representations(v=4):
     data_path = "data/ScientificDocuments/"
-    entities_path = "data/ontology/v{}_ontology_entities.csv".format(v)
-    relations_path = "data/ontology/v{}_ontology_relations.csv".format(v)
-    results_path = "data/ontology/evaluation/"
+    results_path = "data/ontology/evaluation/v{}/".format(v)
     embedder = BertEmbedder('data/scibert_scivocab_cased')
-    # strategies = ["absmax_filtered", "absmax_unfiltered", "max_filtered", "max_unfiltered", "mean_filtered", "mean_unfiltered"]
-    # reductions = ["abs_max", "abs_max", "max", "max", "mean", "mean"]
-    # filters = [True, False, True, False, True, False]
-    strategies = ["absmax, "max", "mean"]
-    filters = [True, True, True]
+    token_pooling = ["absmax", "max", "mean", "none", "absmax", "max", "mean"]
+    mention_pooling = ["none", "none", "none", "none", "absmax", "max", "mean"]
+    
+    # Init train iterator
+    selection = (0, 500)
+    train_iterator = DataIterator(
+        data_path, 
+        selection=selection, 
+        includes_special_tokens=True, 
+    )
+
+    # Init eval iterator
+    selection = (500, 700)
+    eval_iterator = DataIterator(
+        data_path, 
+        selection=selection, 
+        includes_special_tokens=True, 
+    )
+
     results = {}
-    for s, r, f in zip(strategies, reductions, filters):
-
-        # Init train iterator
-        selection = (0, 500)
-        train_iterator = DataIterator(
-            data_path, 
-            selection=selection, 
-            includes_special_tokens=True, 
-            filter_sentences=f
-        )
-
-        # Init eval iterator
-        selection = (500, 700)
-        eval_iterator = DataIterator(
-            data_path, 
-            selection=selection, 
-            includes_special_tokens=True, 
-            filter_sentences=f
-        )
-
-        save_path = "data/ontology/v{}_entity_embeddings_{}.json".format(v, s)
-        ontology = Ontology(entities_path, relations_path)
-        ontology.calculate_entity_embeddings(train_iterator, embedder, r)
-        similarity_scores = ontology.evaluate_entity_embeddings(eval_iterator, embedder, r)
-        save_json(ontology.entity_embeddings, save_path)
-        results[s] = similarity_scores
+    for tp, mp in zip(token_pooling, mention_pooling):
+        ontology = Ontology(v)
+        ontology.calculate_entity_embeddings(train_iterator, embedder, tp, mp)
+        similarity_scores = ontology.evaluate_entity_embeddings(eval_iterator, embedder, tp)
+        results["T|{}|M|{}|".format(tp, mp)] = similarity_scores
 
     save_json(results, results_path+'evaluation_scores.json')
 
-def context_consistency_scores(v=42, f_reduce="mean"):
+def context_consistency_scores(v=42, f_reduce="mean", filtered=True):
     data_path = "data/ScientificDocuments/"
     entities_path = "data/ontology/v{}_ontology_entities.csv".format(v)
     relations_path = "data/ontology/v{}_ontology_relations.csv".format(v)
@@ -111,11 +102,14 @@ def context_consistency_scores(v=42, f_reduce="mean"):
         filter_sentences=True
     )
 
-    entity_embedding_path = "data/ontology/v{}_entity_embeddings_{}_filtered.json".format(v, f_reduce)
+    filter_option = "filtered" if filtered else "unfiltered"
+    entity_embedding_path = "data/ontology/v{}_entity_embeddings_{}_{}.json".format(f_reduce, filter_option)
     ontology = Ontology(entities_path, relations_path, entity_embedding_path)
-    if not ontology.entity_embeddings:
+    if not ontology.entity_index:
         ontology.calculate_entity_embeddings(train_iterator, embedder, f_reduce)
-        save_json(ontology.entity_embeddings, entity_embedding_path)
+        faiss_index.save(ontology.entity_index, ontology.entity_table, "entities_{}_{}".format(f_reduce, filter_option), 
+            output_path+"faiss/")
+
     similarity_scores = ontology.evaluate_entity_embeddings(eval_iterator, embedder, f_reduce)
     stds = []
     entities = []
@@ -135,8 +129,30 @@ def context_consistency_scores(v=42, f_reduce="mean"):
 
     save_json(context_consistency_scores, results_path+'v{}_context_consistency_scores.json'.format(v))
 
+
+def merge_annotated_sets():
+    parent_path = "data/annotation/annotated/"
+    p1 = parent_path+"10_annotated_seed31.json"
+    p2 = parent_path+"20_annotated_seed42.json"
+    p3 = parent_path+"20_annotated_seed45.json"
+    output_path = parent_path+"50_annotated_combined_31_42_45.json"
+
+    d1 = json.load(open(p1))
+    d2 = json.load(open(p2))
+    d3 = json.load(open(p3))
+
+    merged = d1+d2+d3
+
+    with open(output_path, 'w', encoding='utf-8') as f:
+        json.dump(merged, f)
+
 if __name__ == "__main__":
+<<<<<<< HEAD
     evaluate_ontology_representations()
+=======
+    merge_annotated_sets()
+    # evaluate_ontology_representations()
+>>>>>>> token
     # context_consistency_scores()
 
 
