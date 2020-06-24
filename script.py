@@ -50,13 +50,11 @@ def evaluate_ontology_representations():
     data_path = "data/ScientificDocuments/"
     results_path = "data/ontology/evaluation/v{}/".format(version)
     embedder = BertEmbedder('data/scibert_scivocab_cased')
-    # token_pooling = ["absmax", "max", "mean", "none", "absmax", "max", "mean"]
-    # mention_pooling = ["none", "none", "none", "none", "absmax", "max", "mean"]
-    token_pooling = ["max", "mean"]
-    mention_pooling = ["max", "mean"]
+    token_pooling = ["absmax", "max", "mean", "none", "absmax", "max", "mean"]
+    mention_pooling = ["none", "none", "none", "none", "absmax", "max", "mean"]
     
     # Init train iterator
-    selection = (0, 2)
+    selection = (0, 500)
     train_iterator = DataIterator(
         data_path, 
         selection=selection, 
@@ -64,7 +62,7 @@ def evaluate_ontology_representations():
     )
 
     # Init eval iterator
-    selection = (2, 3)
+    selection = (500, 700)
     eval_iterator = DataIterator(
         data_path, 
         selection=selection, 
