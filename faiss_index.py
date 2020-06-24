@@ -25,7 +25,7 @@ def load(path, token_pooling, mention_pooling, device="cpu"):
     table_name = "entities_T|{}|_M|{}|_table".format(token_pooling, mention_pooling)
     index_path = os.path.join(path, index_name)
     table_path = os.path.join(path, table_name)
-    if not os.path.exists(index_path):
+    if not os.path.exists(index_path) or not os.path.exists(table_path):
         return None, None
 
     # Load index

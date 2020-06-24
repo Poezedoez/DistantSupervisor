@@ -148,6 +148,20 @@ def save_copy(input_path, output_path):
     else:
         print("Cannot copy file: input path not found!")
 
+def print_evaluation_scores(path):
+    results = json.load(open(path))
+    pooling_results = []
+    for pooling_combination, type_results in results.items():
+        type_averages = []
+        print(pooling_combination)
+        for type_, scores in type_results.items():
+            average = np.mean(scores)
+            type_averages.append(average)
+            print("{} -> {:.2f}".format(type_, average))
+        pooling_average = np.mean(type_averages)
+        print("pooling method average: {:.2f}".format(pooling_average))
+        print()
+        pooling_results.append(pooling_average)
 
 def plot(cos_thetas, run_date="21_03_2020_11_51_28", set_="test", averaging="micro"):
 
@@ -179,7 +193,9 @@ if __name__ == "__main__":
     # in_path = 'data/DistantlySupervisedDatasets/26_03_2020_09_04_56/train/embedding_labeling/dataset.json'
     # ontology_path = "data/ontology_entities.csv"
     # write_entities_without_duplicates(ontology_path, in_path)
-    annotated_path = "data/annotation/annotated/50_annotated_combined_31_42_45.json"
-    print_dataset(annotated_path, "data/annotation/annotated/annotated_dataset.txt")
+    # annotated_path = "data/annotation/annotated/50_annotated_combined_31_42_45.json"
+    # print_dataset(annotated_path, "data/annotation/annotated/annotated_dataset.txt")
+    path = "data/ontology/evaluation/v4/evaluation_scores.json"
+    print_evaluation_scores(path)
 
 

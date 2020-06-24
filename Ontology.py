@@ -61,16 +61,16 @@ class Ontology:
 
     def calculate_entity_embeddings(self, data_iterator, embedder, token_pooling="none", mention_pooling="none"):
 
-        def _accumulate_mean(embedding, tokens, full_term, type_, ontology_embeddings):
+        def _accumulate_mean(embeddings, tokens, full_term, type_, ontology_embeddings):
             entry = {"type": type_, "string": tokens[0], "full_term": full_term}
-            embedding = torch.stack(embeddings).mean()
+            embedding = torch.stack(embeddings).mean(dim=0)
             old_mean = ontology_embeddings[full_term]["embeddings"][0]
             n = ontology_embedding = ontology_embeddings[full_term]["count"]
             new_mean = old_mean + ((embedding-old_mean)/n)
             ontology_embeddings[full_term]["embeddings"][0] = new_mean
             ontology_embeddings[full_term]["entries"][0] = entry
 
-        def _accumulate_max(embedding, tokens, full_term, type_, ontology_embeddings):
+        def _accumulate_max(embeddings, tokens, full_term, type_, ontology_embeddings):
             entry = {"type": type_, "string": tokens[0], "full_term": full_term}
             old_max = ontology_embeddings[full_term]["embeddings"][0]
             t = torch.stack(embeddings+[old_max])
@@ -78,7 +78,7 @@ class Ontology:
             ontology_embeddings[full_term]["embeddings"][0] = new_max
             ontology_embeddings[full_term]["entries"][0] = entry
 
-        def _accumulate_absmax(embedding, tokens, full_term, type_, ontology_embeddings):
+        def _accumulate_absmax(embeddings, tokens, full_term, type_, ontology_embeddings):
             entry = {"type": type_, "string": tokens[0], "full_term": full_term}
             old_absmax = ontology_embeddings[full_term]["embeddings"][0]
             t = torch.stack(embeddings+[old_absmax])
@@ -87,7 +87,7 @@ class Ontology:
             ontology_embeddings[full_term]["embeddings"][0] = new_absmax
             ontology_embeddings[full_term]["entries"][0] = entry
 
-        def _accumulate_none(embedding, tokens, full_term, type_, ontology_embeddings):
+        def _accumulate_none(embeddings, tokens, full_term, type_, ontology_embeddings):
             for embedding, token in zip(embeddings, tokens):
                 entry = {"type": type_, "string": token, "full_term": full_term}
                 ontology_embeddings[full_term]["embeddings"].append(embedding)
@@ -97,6 +97,7 @@ class Ontology:
         self.entity_index, self.entity_table = faiss_index.load(jp(self.parent_path, self.faiss_dir), 
             token_pooling, mention_pooling, jp(self.parent_path, self.faiss_dir))
         if self.entity_index and self.entity_table:
+            print("Found existing entity index for T|{}| M|{}|, skipping calculations".format(token_pooling, mention_pooling))
             return self.entity_index, self.entity_table
         
         print("Calculating ontology entity embeddings using |{}| token pooling and |{}| mention pooling...".format(
@@ -174,7 +175,7 @@ class Ontology:
         print("{:.2f}% of entities had their own embeddings as the nearest neighbor".format(percent_self_extractions))
         type_means = [np.array(v).mean() for k, v in type_similarity_scores.items() if v]
         overall_mean = np.array(type_means).mean()
-        print("Average distance over all concepts for |{}| token pooling: {:0.2f} \n".format(token_pooling, overall_mean))
+        print("Average similarity over all concepts for |{}| token pooling: {:0.2f} \n".format(token_pooling, overall_mean))
 
         return type_similarity_scores
 

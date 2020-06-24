@@ -50,11 +50,13 @@ def evaluate_ontology_representations():
     data_path = "data/ScientificDocuments/"
     results_path = "data/ontology/evaluation/v{}/".format(version)
     embedder = BertEmbedder('data/scibert_scivocab_cased')
-    token_pooling = ["absmax", "max", "mean", "none", "absmax", "max", "mean"]
-    mention_pooling = ["none", "none", "none", "none", "absmax", "max", "mean"]
+    # token_pooling = ["absmax", "max", "mean", "none", "absmax", "max", "mean"]
+    # mention_pooling = ["none", "none", "none", "none", "absmax", "max", "mean"]
+    token_pooling = ["max", "mean"]
+    mention_pooling = ["max", "mean"]
     
     # Init train iterator
-    selection = (0, 500)
+    selection = (0, 2)
     train_iterator = DataIterator(
         data_path, 
         selection=selection, 
@@ -62,7 +64,7 @@ def evaluate_ontology_representations():
     )
 
     # Init eval iterator
-    selection = (500, 700)
+    selection = (2, 3)
     eval_iterator = DataIterator(
         data_path, 
         selection=selection, 
@@ -77,6 +79,7 @@ def evaluate_ontology_representations():
         results["T|{}|M|{}|".format(tp, mp)] = similarity_scores
 
     save_json(results, results_path+'evaluation_scores.json')
+
 
 def context_consistency_scores(v=42, f_reduce="mean", filtered=True):
     data_path = "data/ScientificDocuments/"
