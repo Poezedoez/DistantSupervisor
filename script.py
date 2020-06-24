@@ -2,7 +2,7 @@ import os
 import glob
 import json
 import nltk
-from write import save_copy, save_json
+from write import save_copy, save_json, print_evaluation_scores
 from nltk.translate.ribes_score import position_of_ngram
 from embedders import BertEmbedder
 from Ontology import Ontology
@@ -76,7 +76,9 @@ def evaluate_ontology_representations():
         similarity_scores = ontology.evaluate_entity_embeddings(eval_iterator, embedder, tp)
         results["T|{}|M|{}|".format(tp, mp)] = similarity_scores
 
-    save_json(results, results_path+'evaluation_scores.json')
+    full_path = results_path+'evaluation_scores.json'
+    save_json(results, full_path)
+    print_evaluation_scores(full_path)
 
 
 def context_consistency_scores(v=42, f_reduce="mean", filtered=True):
