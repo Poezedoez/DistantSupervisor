@@ -7,7 +7,6 @@ from read import DataIterator
 from write import save_json, save_list, save_copy, print_dataset, print_statistics
 from heuristics import EntityMatcher, RelationMatcher
 from Ontology import Ontology
-import nltk
 import copy
 from argparser import get_parser
 
@@ -73,7 +72,6 @@ class DistantSupervisor:
         # print("Number of processors available to use:", len(os.sched_getaffinity(0)))
         start_time = time.time()
         print("Creating dataset...")
-        nltk.download("averaged_perceptron_tagger")
 
         # Init data iterator
         iterator = DataIterator(
@@ -120,7 +118,7 @@ class DistantSupervisor:
 
     
     def _prepare_statistics(self):
-        entity_types = set([e["type"] for e in self.ontology.entities.values()])
+        entity_types = set(self.ontology.entities.values())
         label_statistics = {"relations": Counter(), "relations_total": 0,
                     "entities": {type_: Counter() for type_ in entity_types},
                     "entity_sentences": 0, "entities_total": 0, "tokens_total": 0,

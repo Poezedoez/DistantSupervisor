@@ -57,13 +57,8 @@ class DataIterator:
 
 
 def read_ontology_entity_types(path):
-    ontology_entities = defaultdict(dict)
-    with open(path, 'r', encoding='utf-8') as csv_file:
-        csv_reader = csv.reader(csv_file)
-        next(csv_reader, None)  # skip headers
-        for _, type_, instance in csv_reader:
-            # Currently only one type per concept
-            ontology_entities[instance]["type"] = type_
+    df = pd.read_csv(path)
+    ontology_entities = dict(zip(df["Instance"], df["Class"]))
 
     return ontology_entities
 

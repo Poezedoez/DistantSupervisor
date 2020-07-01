@@ -72,18 +72,17 @@ class EntityMatcher:
         self.cos_theta = cos_theta
         self.embedder = embedder
         self.token_pooling = token_pooling
-
+        nltk.download("averaged_perceptron_tagger")
 
     def string_match(self, tokens, execute=True):
         matches, matched_strings = [], []
         if not execute:
             return matches, matched_strings
         tokens = [token.lower() for token in tokens]
-        for entity_string, entity_values in self.ontology.entities.items():
+        for entity_string, type_ in self.ontology.entities.items():
             tokenized_string = [token.lower() for token in self.embedder.tokenize(entity_string)]
             glued_string, _, _ = glue_subtokens(tokenized_string)
             string_length = len(glued_string)
-            type_ = entity_values["type"]
             
             for occ in KnuthMorrisPratt(tokens, glued_string): 
                 match = (occ, occ+string_length, type_)
