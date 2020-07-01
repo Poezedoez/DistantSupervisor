@@ -9,9 +9,10 @@ import os
 import glob
 import nltk
 import re
-from heuristics import proper_sequence
+from heuristics import proper_sequence, RelationPattern
 from embedders import glue_subtokens
 import faiss
+
 
 class DataIterator:
     def __init__(self, data, selection=None, includes_special_tokens=True, filter_sentences=True):
@@ -74,3 +75,13 @@ def read_ontology_relation_types(path):
         ontology_relations[head][tail] = relation
             
     return ontology_relations
+
+
+def read_relation_patterns(path):
+    df = pd.read_csv(path)
+    relation_patterns = []
+    for index, row in df.iterrows():
+        relation_patterns.append(RelationPattern(row["regex"], row["relation_type"], 
+                                         row["subject_position"], row["subject"]))
+
+    return relation_patterns

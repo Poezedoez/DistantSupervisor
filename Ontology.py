@@ -2,7 +2,7 @@ import read
 from write import save_json, save_list, save_copy
 from embedders import glue_subtokens, BertEmbedder
 from collections import Counter, defaultdict
-from heuristics import string_match, vote
+from heuristics import EntityMatcher
 import torch
 import numpy as np
 import pandas as pd
@@ -47,16 +47,19 @@ class Ontology:
         parent_path,
         entities_file_name="ontology_entities.csv",
         relations_file_name="ontology_relations.csv",
+        patterns_file_name="patterns.csv",
         faiss_dir="faiss/"
     ):
         self.parent_path = parent_path
         self.entities_file_name = entities_file_name
         self.relations_file_name = relations_file_name
+        self.patterns_file_name = patterns_file_name
         self.faiss_dir = faiss_dir
         self.entities = read.read_ontology_entity_types(jp(self.parent_path, self.entities_file_name))
         self.entity_index, self.entity_table = None, None
         self.entity_types = None
         self.relations = read.read_ontology_relation_types(jp(self.parent_path, self.relations_file_name))
+        self.patterns = read.read_relation_patterns(jp(self.parent_path, self.patterns_file_name))
         self.types = self.convert_ontology_types()
 
     def calculate_entity_embeddings(self, data_iterator, embedder, token_pooling="none", mention_pooling="none"):
@@ -111,9 +114,10 @@ class Ontology:
         ontology_embeddings = defaultdict(lambda : {"embeddings":[zeros], "entries":[zeros_entry], "count": 0})
 
         # Accumulate entity embeddings
+        entity_matcher = EntityMatcher(self, embedder, token_pooling)
         for sentence_subtokens, sentence_embeddings, _ in data_iterator.iter_sentences():
             glued_tokens, _, glued2tok = glue_subtokens(sentence_subtokens)
-            string_matches, matched_strings = string_match(glued_tokens, self, embedder)
+            string_matches, matched_strings = entity_matcher.string_match(glued_tokens)
             for i, (span_start, span_end, type_) in enumerate(string_matches):
                 embeddings, matched_tokens = embedder.reduce_embeddings(sentence_embeddings, 
                     span_start, span_end, sentence_subtokens, glued2tok, token_pooling)
@@ -154,9 +158,10 @@ class Ontology:
         type_similarity_scores = defaultdict(list)
         self_extractions = 0
         total = 0
+        entity_matcher = EntityMatcher(self, embedder, token_pooling)
         for sentence_subtokens, sentence_embeddings, _ in data_iterator.iter_sentences():
             glued_tokens, _, glued2tok = glue_subtokens(sentence_subtokens)
-            string_matches, matched_strings = string_match(glued_tokens, self, embedder)
+            string_matches, matched_strings = entity_matcher.string_match(glued_tokens, self, embedder)
             for i, (start, end, type_) in enumerate(string_matches):
                 embeddings, emb_tokens = embedder.reduce_embeddings(sentence_embeddings, start, end, 
                     glued_tokens, glued2tok, token_pooling)
@@ -165,7 +170,7 @@ class Ontology:
                 q = torch.stack(embeddings).numpy()
                 q_norm = preprocessing.normalize(q, axis=1, norm="l2")
                 D, I = self.entity_index.search(q_norm, 1)
-                t, vt, vs, vft = vote(D.reshape(len(D)), I.reshape(len(D)), self)
+                t, vt, vs, vft = entity_matcher.vote(D.reshape(len(D)), I.reshape(len(D)), self)
                 if entity_string in vft:
                     self_extractions += 1
                 type_similarity_scores[type_].append(float(D.mean()))

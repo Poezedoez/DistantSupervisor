@@ -5,7 +5,7 @@ import time
 from collections import defaultdict, Counter
 from read import DataIterator
 from write import save_json, save_list, save_copy, print_dataset, print_statistics
-from heuristics import string_match, embedding_match, combined_match
+from heuristics import EntityMatcher, RelationMatcher
 from Ontology import Ontology
 import nltk
 import copy
@@ -65,6 +65,8 @@ class DistantSupervisor:
         self.label_strategies = {0: "string_labeling", 1: "embedding_labeling", 2: "combined_labeling"}
         self.datasets = {"string_labeling": [], "embedding_labeling": [], "combined_labeling": []}
         self.label_statistics, self.global_statistics = self._prepare_statistics()
+        self.entity_matcher = EntityMatcher(self.ontology, self.embedder, self.token_pooling, cos_theta)
+        self.relation_matcher = RelationMatcher(self.ontology)
         
 
     def supervise(self, label_strategy=0, selection=None):
@@ -132,17 +134,16 @@ class DistantSupervisor:
 
 
     def _label_sentence(self, sentence_subtokens, sentence_embeddings, label_function=0):
-        def label_relations(entities):
+        def label_relations(entities, glued_tokens):
             relations = []
             if len(entities) < 2:
                 return relations
-            pairs = [(a, b) for a in range(0, len(entities)) for b in range(0, len(entities))]
-            for head_index, tail_index in pairs:
-                head = entities[head_index]["type"]
-                tail = entities[tail_index]["type"]
-                relation = self.ontology.relations.get(head, {}).get(tail, None)
-                if relation:
-                    relations.append({"type": relation, "head": head_index, "tail": tail_index})
+            
+            # Get type pairs
+            relations += self.relation_matcher.pair_match(entities)
+
+            # Get isA relations
+            relations += self.relation_matcher.pattern_match(glued_tokens, entities)
 
             return relations
 
@@ -157,23 +158,22 @@ class DistantSupervisor:
 
         # Find string entity matches
         do_string_matching = (label_function == 0 or label_function == 2)
-        string_matches, _ = string_match(glued_tokens, self.ontology, self.embedder, do_string_matching)
+        string_matches, _ = self.entity_matcher.string_match(glued_tokens, do_string_matching)
         string_entities = label_entities(string_matches)
-        string_relations = label_relations(string_entities)
+        string_relations = label_relations(string_entities, glued_tokens)
 
         # Find embedding entity matches
         do_embedding_matching = (label_function == 1 or label_function == 2)
-        embedding_matches = embedding_match(sentence_embeddings, sentence_subtokens, glued2tok, glued_tokens, 
-            self.ontology, self.embedder, do_embedding_matching, threshold=self.cos_theta, 
-            token_pooling=self.token_pooling)
+        embedding_matches = self.entity_matcher.embedding_match(sentence_embeddings, sentence_subtokens, 
+                                                                glued2tok, glued_tokens, do_embedding_matching)
         embedding_entities = label_entities(embedding_matches)
-        embedding_relations = label_relations(embedding_entities)
+        embedding_relations = label_relations(embedding_entities, glued_tokens)
 
         # Find combined entity matches
         do_combined_matching = (label_function == 2)
-        combined_matches = combined_match(string_matches, embedding_matches, do_combined_matching)
+        combined_matches = self.entity_matcher.combined_match(string_matches, embedding_matches, do_combined_matching)
         combined_entities = label_entities(combined_matches)
-        combined_relations = label_relations(combined_entities)
+        combined_relations = label_relations(combined_entities, glued_tokens)
         
         self.global_statistics["sentences_processed"] += 1
         if not string_entities and label_function != 1: # use all sentences with at least one string match

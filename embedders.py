@@ -137,17 +137,18 @@ class BertEmbedder(Embedder):
     def __str__(self):
         return "_BertEmbedder_{}Layer_{}Weights".format(self.transformer_layer, self.pretrained_weights)
 
-def glue_subtokens(subtokens):
+def glue_subtokens(subtokens, seperators=["##"]):
     glued_tokens = []
     tok2glued = []
     glued2tok = []
     for i, token in enumerate(subtokens):
-        if token.startswith('##'):
-            glued_tokens[len(glued_tokens) - 1] = glued_tokens[len(glued_tokens) - 1] + token.replace('##', '')
-        else:
-            glued2tok.append(i)
-            glued_tokens.append(token)
+        for sep in seperators:
+            if token.startswith(sep):
+                glued_tokens[len(glued_tokens) - 1] = glued_tokens[len(glued_tokens) - 1] + token.replace(sep, '')
+            else:
+                glued2tok.append(i)
+                glued_tokens.append(token)
 
-        tok2glued.append(len(glued_tokens) - 1)
+            tok2glued.append(len(glued_tokens) - 1)
 
     return glued_tokens, tok2glued, glued2tok

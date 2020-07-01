@@ -18,50 +18,126 @@ source activate lisaenv
 cp -r $HOME/distantly-supervised-dataset/ $TMPDIR
 cd $TMPDIR/distantly-supervised-dataset
 
-COS_THETA=132
-COMBINED_LABELING=2
-V=4
-ENT_PATH="data/ontology/v${V}_ontology_entities.csv" 
-REL_PATH="data/ontology/v${V}_ontology_relations.csv" 
-REDUCE="mean"
-EMB_PATH="data/ontology/v${V}_entity_embeddings_${REDUCE}_filtered.json" 
 DATE=`date +%d_%m_%Y_%H_%M_%S`
-RUN_NAME="${REDUCE}_filtered_$DATE";
+LABELING_STRATEGY=2 # combined labeling
+V=2
+ONTOLOGY_PATH="data/ontology/v${V}/"
+
+
+TOKEN_POOLING="none"
+MENTION_POOLING="none"
+COS_THETA=0.9
+RUN_NAME="$DATE/T|${TOKEN_POOLING}|_M|${MENTION_POOLING}|";
 
 python DistantSupervisor.py  \
-    --selection 0 500 \
-    --output_path "data/DistantlySupervisedDatasets/ontology_v$V/$RUN_NAME/train/" \
-    --timestamp_given \
-    --label_strategy $COMBINED_LABELING \
-    --cos_theta $COS_THETA \
-    --ontology_entities_path $ENT_PATH \
-    --ontology_relations_path $REL_PATH \
-    --entity_embedding_path $EMB_PATH \
-    --f_reduce $REDUCE \
-    --filter_sentences
+--selection 0 500 \
+--output_path "data/DistantlySupervisedDatasets/ontology_v$V/$RUN_NAME/train/" \
+--timestamp_given \
+--label_strategy $LABELING_STRATEGY \
+--cos_theta $COS_THETA \
+--filter_sentences \
+--ontology_path $ONTOLOGY_PATH \
+--token_pooling ${TOKEN_POOLING} \
+--mention_pooling ${MENTION_POOLING}
 
 python DistantSupervisor.py  \
-    --selection 500 700 \
-    --output_path "data/DistantlySupervisedDatasets/ontology_v$V/$RUN_NAME/dev/" \
-    --timestamp_given \
-    --label_strategy $COMBINED_LABELING \
-    --cos_theta $COS_THETA \
-    --ontology_entities_path $ENT_PATH \
-    --ontology_relations_path $REL_PATH \
-    --entity_embedding_path $EMB_PATH \
-    --f_reduce $REDUCE \
-    --filter_sentences
+--selection 500 700 \
+--output_path "data/DistantlySupervisedDatasets/ontology_v$V/$RUN_NAME/dev/" \
+--timestamp_given \
+--filter_sentences \
+--label_strategy $LABELING_STRATEGY \
+--cos_theta $COS_THETA \
+--ontology_path $ONTOLOGY_PATH \
+--token_pooling ${TOKEN_POOLING} \
+--mention_pooling ${MENTION_POOLING}
 
 python DistantSupervisor.py  \
-    --selection 700 900 \
-    --output_path "data/DistantlySupervisedDatasets/ontology_v$V/$RUN_NAME/test/" \
-    --timestamp_given \
-    --label_strategy $COMBINED_LABELING \
-    --cos_theta $COS_THETA \
-    --ontology_entities_path $ENT_PATH \
-    --ontology_relations_path $REL_PATH \
-    --entity_embedding_path $EMB_PATH \
-    --f_reduce $REDUCE \
-    --filter_sentences
+--selection 700 900 \
+--output_path "data/DistantlySupervisedDatasets/ontology_v$V/$RUN_NAME/test/" \
+--timestamp_given \
+--filter_sentences \
+--label_strategy $LABELING_STRATEGY \
+--cos_theta $COS_THETA \
+--ontology_path $ONTOLOGY_PATH \
+--token_pooling ${TOKEN_POOLING} \
+--mention_pooling ${MENTION_POOLING}
+
+
+TOKEN_POOLING="mean"
+MENTION_POOLING="mean"
+COS_THETA=0.88
+RUN_NAME="$DATE/T|${TOKEN_POOLING}|_M|${MENTION_POOLING}|";
+
+python DistantSupervisor.py  \
+--selection 0 500 \
+--output_path "data/DistantlySupervisedDatasets/ontology_v$V/$RUN_NAME/train/" \
+--timestamp_given \
+--label_strategy $LABELING_STRATEGY \
+--cos_theta $COS_THETA \
+--filter_sentences \
+--ontology_path $ONTOLOGY_PATH \
+--token_pooling ${TOKEN_POOLING} \
+--mention_pooling ${MENTION_POOLING}
+
+python DistantSupervisor.py  \
+--selection 500 700 \
+--output_path "data/DistantlySupervisedDatasets/ontology_v$V/$RUN_NAME/dev/" \
+--timestamp_given \
+--filter_sentences \
+--label_strategy $LABELING_STRATEGY \
+--cos_theta $COS_THETA \
+--ontology_path $ONTOLOGY_PATH \
+--token_pooling ${TOKEN_POOLING} \
+--mention_pooling ${MENTION_POOLING}
+
+python DistantSupervisor.py  \
+--selection 700 900 \
+--output_path "data/DistantlySupervisedDatasets/ontology_v$V/$RUN_NAME/test/" \
+--timestamp_given \
+--filter_sentences \
+--label_strategy $LABELING_STRATEGY \
+--cos_theta $COS_THETA \
+--ontology_path $ONTOLOGY_PATH \
+--token_pooling ${TOKEN_POOLING} \
+--mention_pooling ${MENTION_POOLING}
+
+
+TOKEN_POOLING="mean"
+MENTION_POOLING="none"
+COS_THETA=0.9
+RUN_NAME="$DATE/T|${TOKEN_POOLING}|_M|${MENTION_POOLING}|";
+
+python DistantSupervisor.py  \
+--selection 0 500 \
+--output_path "data/DistantlySupervisedDatasets/ontology_v$V/$RUN_NAME/train/" \
+--timestamp_given \
+--label_strategy $LABELING_STRATEGY \
+--cos_theta $COS_THETA \
+--filter_sentences \
+--ontology_path $ONTOLOGY_PATH \
+--token_pooling ${TOKEN_POOLING} \
+--mention_pooling ${MENTION_POOLING}
+
+python DistantSupervisor.py  \
+--selection 500 700 \
+--output_path "data/DistantlySupervisedDatasets/ontology_v$V/$RUN_NAME/dev/" \
+--timestamp_given \
+--filter_sentences \
+--label_strategy $LABELING_STRATEGY \
+--cos_theta $COS_THETA \
+--ontology_path $ONTOLOGY_PATH \
+--token_pooling ${TOKEN_POOLING} \
+--mention_pooling ${MENTION_POOLING}
+
+python DistantSupervisor.py  \
+--selection 700 900 \
+--output_path "data/DistantlySupervisedDatasets/ontology_v$V/$RUN_NAME/test/" \
+--timestamp_given \
+--filter_sentences \
+--label_strategy $LABELING_STRATEGY \
+--cos_theta $COS_THETA \
+--ontology_path $ONTOLOGY_PATH \
+--token_pooling ${TOKEN_POOLING} \
+--mention_pooling ${MENTION_POOLING}
 
 cp -r data/DistantlySupervisedDatasets/ $HOME/distantly-supervised-dataset/data/
