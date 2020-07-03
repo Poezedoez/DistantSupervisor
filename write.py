@@ -195,7 +195,8 @@ if __name__ == "__main__":
     # write_entities_without_duplicates(ontology_path, in_path)
     # annotated_path = "data/annotation/annotated/50_annotated_combined_31_42_45.json"
     # print_dataset(annotated_path, "data/annotation/annotated/annotated_dataset.txt")
-    path = "data/ontology/evaluation/v4/evaluation_scores.json"
-    print_evaluation_scores(path)
+    # path = "data/ontology/evaluation/v4/evaluation_scores.json"
+    # print_evaluation_scores(path)
+    print_statistics("data/DistantlySupervisedDatasets/ontology_v4/01_07_2020_16_22_15/T|none|_M|none|/train/combined_labeling/statistics.json")
 
 

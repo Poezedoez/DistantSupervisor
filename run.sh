@@ -1,6 +1,7 @@
 COS_THETA=0.83
 COMBINED_LABELING=2
 V=4
+ONTOLOGY_PATH="data/ontology/v$V/"
 TOKEN_POOLING="none"
 MENTION_POOLING="none"
 DATE=`date +%d_%m_%Y_%H_%M_%S`
@@ -12,7 +13,7 @@ python DistantSupervisor.py  \
     --timestamp_given \
     --label_strategy $COMBINED_LABELING \
     --cos_theta $COS_THETA \
-    --ontology_version $V \
+    --ontology_path $ONTOLOGY_PATH \
     --token_pooling $TOKEN_POOLING \
     --mention_pooling $MENTION_POOLING \ 
     --filter_sentences
@@ -23,7 +24,7 @@ python DistantSupervisor.py  \
     --timestamp_given \
     --label_strategy $COMBINED_LABELING \
     --cos_theta $COS_THETA \
-    --ontology_version $V \
+    --ontology_path $ONTOLOGY_PATH \
     --token_pooling $TOKEN_POOLING \
     --mention_pooling $MENTION_POOLING \ 
     --filter_sentences

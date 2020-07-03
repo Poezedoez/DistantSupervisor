@@ -8,6 +8,8 @@ from embedders import BertEmbedder
 from Ontology import Ontology
 from read import DataIterator
 import numpy as np
+from evaluate import evaluate as eval
+from heuristics import RelationMatcher
 
 def read_full_texts(path):
     flist = os.listdir(path)
@@ -151,9 +153,25 @@ def merge_annotated_sets():
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(merged, f)
 
+def test_overlap_evaluation():
+    train = "data/DistantlySupervisedDatasets/23_03_2020_15_35_01/train/0.90/string_labeling/dataset.json"
+    pred = "data/DistantlySupervisedDatasets/26_03_2020_09_04_56/dev/embedding_labeling/dataset.json"
+    gt = "data/DistantlySupervisedDatasets/26_03_2020_09_04_56/dev/string_labeling/dataset.json"
+    eval(gt, pred, train, split="all")
+
+def test_relation_matcher():
+    version = 4
+    ontology_path = "data/ontology/v{}/".format(version)
+    ontology = Ontology(ontology_path)
+    rel_matcher = RelationMatcher(ontology)
+    tokens = ["k", "-", "NN", "is", "a", "local", "classifier", "so", "k", "-", "means", "or", "any", "clustering", "algorithm", "can", "be", "used", "for", "NLP"]
+    entities = [{"start":0, "end":3, "type":"mla"}, {"start":5, "end":7, "type":"mla"}, {"start":8, "end":11, "type":"mla"}, {"start":13, "end":15, "type":"mla"}, {"start":19, "end":20, "type":"aa"}]
+    rel_matcher.pattern_match(tokens, entities, verbose=True)
+
 if __name__ == "__main__":
-    evaluate_ontology_representations()
-    # context_consistency_scores()
+    # test_overlap_evaluation()
+    # evaluate_ontology_representations()
+    test_relation_matcher()
 
 
 

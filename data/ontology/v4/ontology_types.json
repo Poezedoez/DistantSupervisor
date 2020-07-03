@@ -1,1 +1,91 @@
-{"entities": {"application_area": {"short": "application_area", "verbose": "application_area"}, "technique": {"short": "technique", "verbose": "technique"}, "machine_learning_algorithm": {"short": "machine_learning_algorithm", "verbose": "machine_learning_algorithm"}, "software_framework": {"short": "software_framework", "verbose": "software_framework"}, "architectural_element": {"short": "architectural_element", "verbose": "architectural_element"}, "metric": {"short": "metric", "verbose": "metric"}, "hardware": {"short": "hardware", "verbose": "hardware"}, "learning_paradigm": {"short": "learning_paradigm", "verbose": "learning_paradigm"}, "dataset": {"short": "dataset", "verbose": "dataset"}}, "relations": {"hasProperty": {"short": "hasProperty", "verbose": "hasProperty"}, "builtWith": {"short": "builtWith", "verbose": "builtWith"}, "trainedWith": {"short": "trainedWith", "verbose": "trainedWith"}, "scoresOn": {"short": "scoresOn", "verbose": "scoresOn"}, "usedFor": {"short": "usedFor", "verbose": "usedFor"}, "hasMetric": {"short": "hasMetric", "verbose": "hasMetric"}}}
+{
+    "entities": {
+        "hardware": {
+            "short": "hardware",
+            "verbose": "hardware"
+        },
+        "metric": {
+            "short": "metric",
+            "verbose": "metric"
+        },
+        "software_framework": {
+            "short": "software_framework",
+            "verbose": "software_framework"
+        },
+        "machine_learning_algorithm": {
+            "short": "machine_learning_algorithm",
+            "verbose": "machine_learning_algorithm"
+        },
+        "architectural_element": {
+            "short": "architectural_element",
+            "verbose": "architectural_element"
+        },
+        "technique": {
+            "short": "technique",
+            "verbose": "technique"
+        },
+        "dataset": {
+            "short": "dataset",
+            "verbose": "dataset"
+        },
+        "learning_paradigm": {
+            "short": "learning_paradigm",
+            "verbose": "learning_paradigm"
+        },
+        "application_area": {
+            "short": "application_area",
+            "verbose": "application_area"
+        }
+    },
+    "relations": {
+        "hasMetric": {
+            "short": "hasMetric",
+            "verbose": "hasMetric",
+            "symmetric": false
+        },
+        "trainedWith": {
+            "short": "trainedWith",
+            "verbose": "trainedWith",
+            "symmetric": false
+        },
+        "hasProperty": {
+            "short": "hasProperty",
+            "verbose": "hasProperty",
+            "symmetric": false
+        },
+        "builtWith": {
+            "short": "builtWith",
+            "verbose": "builtWith",
+            "symmetric": false
+        },
+        "appliedIn": {
+            "short": "appliedIn",
+            "verbose": "appliedIn",
+            "symmetric": false
+        },
+        "usedFor": {
+            "short": "usedFor",
+            "verbose": "usedFor",
+            "symmetric": false
+        },
+        "scoresOn": {
+            "short": "scoresOn",
+            "verbose": "scoresOn",
+            "symmetric": false
+        },
+        "usedIn": {
+            "short": "usedIn",
+            "verbose": "usedIn",
+            "symmetric": false
+        }
+    },
+    "hardware": 0,
+    "metric": 1,
+    "software_framework": 2,
+    "machine_learning_algorithm": 3,
+    "architectural_element": 4,
+    "technique": 5,
+    "dataset": 6,
+    "learning_paradigm": 7,
+    "application_area": 8
+}

@@ -161,7 +161,7 @@ class Ontology:
         entity_matcher = EntityMatcher(self, embedder, token_pooling)
         for sentence_subtokens, sentence_embeddings, _ in data_iterator.iter_sentences():
             glued_tokens, _, glued2tok = glue_subtokens(sentence_subtokens)
-            string_matches, matched_strings = entity_matcher.string_match(glued_tokens, self, embedder)
+            string_matches, matched_strings = entity_matcher.string_match(glued_tokens)
             for i, (start, end, type_) in enumerate(string_matches):
                 embeddings, emb_tokens = embedder.reduce_embeddings(sentence_embeddings, start, end, 
                     glued_tokens, glued2tok, token_pooling)
@@ -170,7 +170,7 @@ class Ontology:
                 q = torch.stack(embeddings).numpy()
                 q_norm = preprocessing.normalize(q, axis=1, norm="l2")
                 D, I = self.entity_index.search(q_norm, 1)
-                t, vt, vs, vft = entity_matcher.vote(D.reshape(len(D)), I.reshape(len(D)), self)
+                t, vt, vs, vft = entity_matcher.vote(D.reshape(len(D)), I.reshape(len(D)))
                 if entity_string in vft:
                     self_extractions += 1
                 type_similarity_scores[type_].append(float(D.mean()))
