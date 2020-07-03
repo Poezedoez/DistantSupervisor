@@ -1,8 +1,0 @@
-head,relation,tail,symmetric
-dataset,hasMetric,metric,false
-machine_learning_algorithm,trainedWith,hardware,false
-machine_learning_algorithm,hasProperty,architectural_element,false
-machine_learning_algorithm,builtWith,software_framework,false
-machine_learning_algorithm,usedFor,application_area,false
-technique,usedFor,machine_learning_algorithm,false
-machine_learning_algorithm,scoresOn,dataset,false
