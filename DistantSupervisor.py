@@ -49,9 +49,10 @@ class DistantSupervisor:
         cos_theta=0.80,
         filter_sentences=True,
         token_pooling="mean",
-        mention_pooling="mean"
+        mention_pooling="mean",
+        entity_fraction=1.0
     ):
-        self.ontology = Ontology(ontology_path)
+        self.ontology = Ontology(ontology_path, entity_fraction=entity_fraction)
         self.embedder = BertEmbedder(tokenizer_path)
         self.timestamp = '' if timestamp_given else time.strftime("%Y%m%d-%H%M%S")+'/'
         self.data_path = data_path
@@ -66,6 +67,7 @@ class DistantSupervisor:
         self.label_statistics, self.global_statistics = self._prepare_statistics()
         self.entity_matcher = EntityMatcher(self.ontology, self.embedder, self.token_pooling, cos_theta)
         self.relation_matcher = RelationMatcher(self.ontology)
+        self.entity_fraction = entity_fraction
         
 
     def supervise(self, label_strategy=0, selection=None):
@@ -225,7 +227,8 @@ if __name__ == "__main__":
         cos_theta=args.cos_theta, 
         filter_sentences=args.filter_sentences, 
         token_pooling=args.token_pooling,
-        mention_pooling=args.mention_pooling
+        mention_pooling=args.mention_pooling,
+        entity_fraction=args.entity_fraction
     )
 
     supervisor.supervise(label_strategy=args.label_strategy, selection=tuple(args.selection))

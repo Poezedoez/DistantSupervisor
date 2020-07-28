@@ -16,5 +16,6 @@ def get_parser():
     parser.add_argument('--filter_sentences', default=False, action="store_true")
     parser.add_argument('--token_pooling', type=str, default="mean", choices=["mean", "max", "absmax", "none", "first"])
     parser.add_argument('--mention_pooling', type=str, default="mean", choices=["mean", "max", "absmax", "none"])
-    
+    parser.add_argument('--entity_fraction', type=float, default=1.0, help="fraction of ontology entity concepts to use") 
+
     return parser    

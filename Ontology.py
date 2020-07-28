@@ -19,13 +19,14 @@ class Ontology:
         entities_file_name (str): name of the 
         relations_file_name (str): path to the ontology relations csv file
         faiss_index_path (str): path to the folder with faiss index and table
+        entity_fraction (float): fraction of the ontology entity concepts to use
 
     Attr:
-        ontology_entities (dict): ontology loaded with json from the given path
-        ontology_relations (dict): ontology loaded with json from the given path
+        ontology_entities (dict): ontology entities loaded with json
+        ontology_relations (dict): ontology relations loaded with json
         faiss_index_path (str): path to the folder with faiss index and table
         entity_index (Faiss index): faiss index with ontology entity embeddings
-        entity_table (array): ordered table with embedding properties
+        entity_table (list): ordered table with embedding properties
 
 
     Ontology will look for files in the following locations:
@@ -48,19 +49,21 @@ class Ontology:
         entities_file_name="ontology_entities.csv",
         relations_file_name="ontology_relations.csv",
         patterns_file_name="patterns.csv",
-        faiss_dir="faiss/"
+        faiss_dir="faiss/",
+        entity_fraction=1.0
     ):
         self.parent_path = parent_path
         self.entities_file_name = entities_file_name
         self.relations_file_name = relations_file_name
         self.patterns_file_name = patterns_file_name
         self.faiss_dir = faiss_dir
-        self.entities = read.read_ontology_entity_types(jp(self.parent_path, self.entities_file_name))
+        self.entities = read.read_ontology_entity_types(jp(self.parent_path, self.entities_file_name), entity_fraction)
         self.entity_index, self.entity_table = None, None
         self.entity_types = None
         self.relations = read.read_ontology_relation_types(jp(self.parent_path, self.relations_file_name))
         self.patterns = read.read_relation_patterns(jp(self.parent_path, self.patterns_file_name))
         self.types = self.convert_ontology_types()
+        self.entity_fraction = entity_fraction
 
     def calculate_entity_embeddings(self, data_iterator, embedder, token_pooling="none", mention_pooling="none"):
 

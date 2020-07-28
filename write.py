@@ -84,9 +84,8 @@ def print_statistics(path):
     print()
 
 
-def write_entities_without_duplicates(ontology_entities_path, dataset_path, output_path='entity_candidates.csv'):
-    ontology_entities = read_ontology_entity_types(ontology_entities_path)
-    entity_set = set([entity.lower() for entity in ontology_entities])
+def write_entities_without_duplicates(ontology, dataset_path, output_path='entity_candidates.csv'):
+    entity_set = set([entity.lower() for entity in ontology.entities])
     with open(dataset_path, 'r', encoding='utf-8') as json_file:
         dataset = json.load(json_file)
 

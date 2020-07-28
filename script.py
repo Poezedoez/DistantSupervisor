@@ -8,6 +8,7 @@ from embedders import BertEmbedder
 from Ontology import Ontology
 from read import DataIterator
 import numpy as np
+import pandas as pd
 from evaluate import evaluate as eval
 from heuristics import RelationMatcher
 
@@ -168,10 +169,19 @@ def test_relation_matcher():
     entities = [{"start":0, "end":3, "type":"mla"}, {"start":5, "end":7, "type":"mla"}, {"start":8, "end":11, "type":"mla"}, {"start":13, "end":15, "type":"mla"}, {"start":19, "end":20, "type":"aa"}]
     rel_matcher.pattern_match(tokens, entities, verbose=True)
 
+def clean_ontology_v7():
+    df = pd.read_csv('data/ontology/v7/ontology_entities_unfiltered.csv')
+    unwanted_concepts = ["CONCEPT", "AI concept"]
+    filtered = df[~(df.word_match =='no') & (~df.parent_name.isin(unwanted_concepts))]
+    df_out = filtered.rename(columns={"final name":"Instance", "parent_name":"Class"})
+    df_out[['Class', 'Instance']].to_csv('data/ontology/v7/ontology_entities.csv', index=False)
+
+
 if __name__ == "__main__":
     # test_overlap_evaluation()
     # evaluate_ontology_representations()
-    test_relation_matcher()
+    # test_relation_matcher()
+    clean_ontology_v7()
 
 
 

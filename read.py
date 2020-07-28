@@ -12,6 +12,7 @@ import re
 from heuristics import proper_sequence, RelationPattern
 from embedders import glue_subtokens
 import faiss
+import math
 
 
 class DataIterator:
@@ -56,9 +57,21 @@ class DataIterator:
             yield text, embeddings, folder
 
 
-def read_ontology_entity_types(path):
+def read_ontology_entity_types(path, fraction=1.0, verbose=True):
     df = pd.read_csv(path)
-    ontology_entities = dict(zip(df["Instance"], df["Class"]))
+    df["Class"] = df["Class"].str.lower()
+    new_df = pd.DataFrame(columns=df.columns)
+    unique_classes = set(df["Class"].tolist())
+    for c in unique_classes:
+        filtered = df[df["Class"]==c]
+        class_count = len(filtered)
+        samples = math.ceil(fraction*class_count)
+        if verbose:
+            print("sampled {} out of {} for |{}|:".format(samples, class_count, c))
+        selection = filtered.sample(n=samples)
+        new_df = new_df.append(selection, ignore_index=True)
+    
+    ontology_entities = dict(zip(new_df["Instance"], df["Class"]))
 
     return ontology_entities
 
@@ -80,3 +93,6 @@ def read_relation_patterns(path):
                                          row["subject_position"], row["subject"]))
 
     return relation_patterns
+
+if __name__ == "__main__":
+    read_ontology_entity_types('data/ontology/v7/ontology_entities.csv', fraction=0.1)

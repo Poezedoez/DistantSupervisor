@@ -150,7 +150,7 @@ class EntityMatcher:
                 matches.append((np_start, np_end, type_))  
 
         return matches
-
+        
 
     def combined_match(self, string_matches, embedding_matches, execute=True):
         matches = []
