@@ -32,7 +32,7 @@ ENTITY_FRACTION=0.25
 
 python DistantSupervisor.py  \
 --selection 0 500 \
---output_path "data/DistantlySupervisedDatasets/ontology_v$V/${RUN_NAME}_F|${FRACTION}/train/" \
+--output_path "data/DistantlySupervisedDatasets/ontology_v$V/${RUN_NAME}_F|${ENTITY_FRACTION}|/train/" \
 --timestamp_given \
 --label_strategy $LABELING_STRATEGY \
 --cos_theta $COS_THETA \
@@ -44,7 +44,7 @@ python DistantSupervisor.py  \
 
 python DistantSupervisor.py  \
 --selection 500 700 \
---output_path "data/DistantlySupervisedDatasets/ontology_v$V/${RUN_NAME}_F|${FRACTION}/dev/" \
+--output_path "data/DistantlySupervisedDatasets/ontology_v$V/${RUN_NAME}_F|${ENTITY_FRACTION}|/dev/" \
 --timestamp_given \
 --filter_sentences \
 --label_strategy $LABELING_STRATEGY \
@@ -56,7 +56,7 @@ python DistantSupervisor.py  \
 
 python DistantSupervisor.py  \
 --selection 700 1000 \
---output_path "data/DistantlySupervisedDatasets/ontology_v$V/${RUN_NAME}_F|${FRACTION}/test/" \
+--output_path "data/DistantlySupervisedDatasets/ontology_v$V/${RUN_NAME}_F|${ENTITY_FRACTION}|/test/" \
 --timestamp_given \
 --filter_sentences \
 --label_strategy $LABELING_STRATEGY \
@@ -71,7 +71,7 @@ ENTITY_FRACTION=0.5
 
 python DistantSupervisor.py  \
 --selection 0 500 \
---output_path "data/DistantlySupervisedDatasets/ontology_v$V/${RUN_NAME}_F|${FRACTION}/train/" \
+--output_path "data/DistantlySupervisedDatasets/ontology_v$V/${RUN_NAME}_F|${ENTITY_FRACTION}|/train/" \
 --timestamp_given \
 --label_strategy $LABELING_STRATEGY \
 --cos_theta $COS_THETA \
@@ -83,7 +83,7 @@ python DistantSupervisor.py  \
 
 python DistantSupervisor.py  \
 --selection 500 700 \
---output_path "data/DistantlySupervisedDatasets/ontology_v$V/${RUN_NAME}_F|${FRACTION}/dev/" \
+--output_path "data/DistantlySupervisedDatasets/ontology_v$V/${RUN_NAME}_F|${ENTITY_FRACTION}|/dev/" \
 --timestamp_given \
 --filter_sentences \
 --label_strategy $LABELING_STRATEGY \
@@ -95,7 +95,7 @@ python DistantSupervisor.py  \
 
 python DistantSupervisor.py  \
 --selection 700 1000 \
---output_path "data/DistantlySupervisedDatasets/ontology_v$V/${RUN_NAME}_F|${FRACTION}/test/" \
+--output_path "data/DistantlySupervisedDatasets/ontology_v$V/${RUN_NAME}_F|${ENTITY_FRACTION}|/test/" \
 --timestamp_given \
 --filter_sentences \
 --label_strategy $LABELING_STRATEGY \
@@ -110,7 +110,7 @@ ENTITY_FRACTION=0.75
 
 python DistantSupervisor.py  \
 --selection 0 500 \
---output_path "data/DistantlySupervisedDatasets/ontology_v$V/${RUN_NAME}_F|${FRACTION}/train/" \
+--output_path "data/DistantlySupervisedDatasets/ontology_v$V/${RUN_NAME}_F|${ENTITY_FRACTION}|/train/" \
 --timestamp_given \
 --label_strategy $LABELING_STRATEGY \
 --cos_theta $COS_THETA \
@@ -122,7 +122,7 @@ python DistantSupervisor.py  \
 
 python DistantSupervisor.py  \
 --selection 500 700 \
---output_path "data/DistantlySupervisedDatasets/ontology_v$V/${RUN_NAME}_F|${FRACTION}/dev/" \
+--output_path "data/DistantlySupervisedDatasets/ontology_v$V/${RUN_NAME}_F|${ENTITY_FRACTION}|/dev/" \
 --timestamp_given \
 --filter_sentences \
 --label_strategy $LABELING_STRATEGY \
@@ -134,7 +134,7 @@ python DistantSupervisor.py  \
 
 python DistantSupervisor.py  \
 --selection 700 1000 \
---output_path "data/DistantlySupervisedDatasets/ontology_v$V/${RUN_NAME}_F|${FRACTION}/test/" \
+--output_path "data/DistantlySupervisedDatasets/ontology_v$V/${RUN_NAME}_F|${ENTITY_FRACTION}|/test/" \
 --timestamp_given \
 --filter_sentences \
 --label_strategy $LABELING_STRATEGY \
