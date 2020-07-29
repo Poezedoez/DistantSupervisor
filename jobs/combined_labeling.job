@@ -28,45 +28,6 @@ COS_THETA=0.87
 RUN_NAME="$DATE/T|${TOKEN_POOLING}|_M|${MENTION_POOLING}|";
 
 
-ENTITY_FRACTION=0.1
-
-python DistantSupervisor.py  \
---selection 0 500 \
---output_path "data/DistantlySupervisedDatasets/ontology_v$V/${RUN_NAME}_F|${FRACTION}/train/" \
---timestamp_given \
---label_strategy $LABELING_STRATEGY \
---cos_theta $COS_THETA \
---filter_sentences \
---ontology_path $ONTOLOGY_PATH \
---token_pooling ${TOKEN_POOLING} \
---mention_pooling ${MENTION_POOLING} \
---entity_fraction $ENTITY_FRACTION
-
-python DistantSupervisor.py  \
---selection 500 700 \
---output_path "data/DistantlySupervisedDatasets/ontology_v$V/${RUN_NAME}_F|${FRACTION}/dev/" \
---timestamp_given \
---filter_sentences \
---label_strategy $LABELING_STRATEGY \
---cos_theta $COS_THETA \
---ontology_path $ONTOLOGY_PATH \
---token_pooling ${TOKEN_POOLING} \
---mention_pooling ${MENTION_POOLING} \
---entity_fraction $ENTITY_FRACTION
-
-python DistantSupervisor.py  \
---selection 700 1000 \
---output_path "data/DistantlySupervisedDatasets/ontology_v$V/${RUN_NAME}_F|${FRACTION}/test/" \
---timestamp_given \
---filter_sentences \
---label_strategy $LABELING_STRATEGY \
---cos_theta $COS_THETA \
---ontology_path $ONTOLOGY_PATH \
---token_pooling ${TOKEN_POOLING} \
---mention_pooling ${MENTION_POOLING} \
---entity_fraction $ENTITY_FRACTION
-
-
 ENTITY_FRACTION=0.25
 
 python DistantSupervisor.py  \
@@ -183,43 +144,5 @@ python DistantSupervisor.py  \
 --mention_pooling ${MENTION_POOLING} \
 --entity_fraction $ENTITY_FRACTION
 
-
-ENTITY_FRACTION=1.0
-
-python DistantSupervisor.py  \
---selection 0 500 \
---output_path "data/DistantlySupervisedDatasets/ontology_v$V/${RUN_NAME}_F|${FRACTION}/train/" \
---timestamp_given \
---label_strategy $LABELING_STRATEGY \
---cos_theta $COS_THETA \
---filter_sentences \
---ontology_path $ONTOLOGY_PATH \
---token_pooling ${TOKEN_POOLING} \
---mention_pooling ${MENTION_POOLING} \
---entity_fraction $ENTITY_FRACTION
-
-python DistantSupervisor.py  \
---selection 500 700 \
---output_path "data/DistantlySupervisedDatasets/ontology_v$V/${RUN_NAME}_F|${FRACTION}/dev/" \
---timestamp_given \
---filter_sentences \
---label_strategy $LABELING_STRATEGY \
---cos_theta $COS_THETA \
---ontology_path $ONTOLOGY_PATH \
---token_pooling ${TOKEN_POOLING} \
---mention_pooling ${MENTION_POOLING} \
---entity_fraction $ENTITY_FRACTION
-
-python DistantSupervisor.py  \
---selection 700 1000 \
---output_path "data/DistantlySupervisedDatasets/ontology_v$V/${RUN_NAME}_F|${FRACTION}/test/" \
---timestamp_given \
---filter_sentences \
---label_strategy $LABELING_STRATEGY \
---cos_theta $COS_THETA \
---ontology_path $ONTOLOGY_PATH \
---token_pooling ${TOKEN_POOLING} \
---mention_pooling ${MENTION_POOLING} \
---entity_fraction $ENTITY_FRACTION
 
 cp -r data/DistantlySupervisedDatasets/ $HOME/DSD/data/
