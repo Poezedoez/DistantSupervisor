@@ -183,10 +183,12 @@ def copy_DSD_files(path, name="za1", fractions=[0.25, 0.5, 0.75]):
     destination_path = "~/speer/data/datasets/{}/".format(name)
     Path(destination_path).mkdir(parents=True, exist_ok=True)
     for f in fractions:
-        train_source_path = "T|{}|_M|{}|_F|{}|/train/combined_labeling/dataset.json".format(pooling, pooling, f)
+        train = "T|{}|_M|{}|_F|{}|/train/combined_labeling/dataset.json".format(pooling, pooling, f)
+        train_source_path = os.path.join(path, train)
         train_destination_path = os.path.join(destination_path, "za_train_{}.json".format(f))
         shutil.copy(train_source_path, train_destination_path)
-        dev_source_path = "T|{}|_M|{}|_F|{}|/dev/combined_labeling/dataset.json".format(pooling, pooling, f)
+        dev = "T|{}|_M|{}|_F|{}|/dev/combined_labeling/dataset.json".format(pooling, pooling, f)
+        dev_source_path = os.path.join(path, dev)
         dev_destination_path = os.path.join(destination_path, "za_dev_{}.json".format(f))
         shutil.copy(dev_source_path, dev_destination_path)
 
