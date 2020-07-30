@@ -190,6 +190,10 @@ def copy_DSD_files(path, name="za1", fractions=[0.25, 0.5, 0.75]):
         dev_destination_path = os.path.join(destination_path, "za_dev_{}.json".format(f))
         shutil.copy(dev_source_path, dev_destination_path)
 
+    shutil.copy("data/DistantlySupervisedDatasets/ontology_v7/28_07_2020_16_24_57/T|none|_M|none|_F|1.0|/test/string_labeling/dataset.json",
+                os.path.join(destination_path, "za_test.json")
+    
+
 
 
 
@@ -197,8 +201,9 @@ if __name__ == "__main__":
     # test_overlap_evaluation()
     # evaluate_ontology_representations()
     # test_relation_matcher()
-    clean_ontology_v7()
-
+    # clean_ontology_v7()
+    copy_DSD_files("data/DistantlySupervisedDatasets/ontology_v7/29_07_2020_17_57_26", name="za1")
+    copy_DSD_files("data/DistantlySupervisedDatasets/ontology_v7/29_07_2020_18_02_46", name="za2")
 
 
 
