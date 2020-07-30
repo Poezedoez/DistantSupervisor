@@ -9,6 +9,8 @@ from Ontology import Ontology
 from read import DataIterator
 import numpy as np
 import pandas as pd
+import shutil
+from pathlib import Path
 from evaluate import evaluate as eval
 from heuristics import RelationMatcher
 
@@ -175,6 +177,20 @@ def clean_ontology_v7():
     filtered = df[~(df.word_match =='no') & (~df.parent_name.isin(unwanted_concepts))]
     df_out = filtered.rename(columns={"final name":"Instance", "parent_name":"Class"})
     df_out[['Class', 'Instance']].to_csv('data/ontology/v7/ontology_entities.csv', index=False)
+
+def copy_DSD_files(path, name="za1", fractions=[0.25, 0.5, 0.75]):
+    pooling = "none"
+    destination_path = "~/speer/data/datasets/{}/".format(name)
+    Path(destination_path).mkdir(parents=True, exist_ok=True)
+    for f in fractions:
+        train_source_path = "T|{}|_M|{}|_F|{}|/train/combined_labeling/dataset.json".format(pooling, pooling, f)
+        train_destination_path = os.path.join(destination_path, "za_train_{}.json".format(f))
+        shutil.copy(train_source_path, train_destination_path)
+        dev_source_path = "T|{}|_M|{}|_F|{}|/dev/combined_labeling/dataset.json".format(pooling, pooling, f)
+        dev_destination_path = os.path.join(destination_path, "za_dev_{}.json".format(f))
+        shutil.copy(dev_source_path, dev_destination_path)
+
+
 
 
 if __name__ == "__main__":
