@@ -204,8 +204,8 @@ if __name__ == "__main__":
     # evaluate_ontology_representations()
     # test_relation_matcher()
     # clean_ontology_v7()
-    copy_DSD_files("data/DistantlySupervisedDatasets/ontology_v7/29_07_2020_17_57_26", name="za1")
-    copy_DSD_files("data/DistantlySupervisedDatasets/ontology_v7/29_07_2020_18_02_46", name="za2")
-
+    # copy_DSD_files("data/DistantlySupervisedDatasets/ontology_v7/29_07_2020_17_57_26", name="za1")
+    # copy_DSD_files("data/DistantlySupervisedDatasets/ontology_v7/29_07_2020_18_02_46", name="za2")
+    copy_DSD_files("data/DistantlySupervisedDatasets/ontology_v7/30_07_2020_10_20_55", name="za3")
 
 
