@@ -86,6 +86,27 @@ def evaluate_ontology_representations():
     print_evaluation_scores(full_path)
 
 
+def precalculate_ontology_representations():
+    version = 7
+    ontology_path = "data/ontology/v{}/".format(version)
+    data_path = "data/ScientificDocuments/"
+    embedder = BertEmbedder('data/scibert_scivocab_cased')
+    token_pooling = ["mean", "none"]
+    mention_pooling = ["none", "none"]
+
+    for t, m in zip(token_pooling, mention_pooling):
+
+        # Init train iterator
+        selection = (0, 500)
+        train_iterator = DataIterator(
+            data_path, 
+            selection=selection, 
+            includes_special_tokens=True, 
+        )
+
+        ontology = Ontology(ontology_path)
+        ontology.calculate_entity_embeddings(train_iterator, embedder, t, m)
+
 def context_consistency_scores(v=42, f_reduce="mean", filtered=True):
     data_path = "data/ScientificDocuments/"
     entities_path = "data/ontology/v{}_ontology_entities.csv".format(v)
@@ -176,11 +197,13 @@ def clean_ontology_v7():
     unwanted_concepts = ["CONCEPT", "AI concept"]
     filtered = df[~(df.word_match =='no') & (~df.parent_name.isin(unwanted_concepts))]
     df_out = filtered.rename(columns={"final name":"Instance", "parent_name":"Class"})
-    df_out[['Class', 'Instance']].to_csv('data/ontology/v7/ontology_entities.csv', index=False)
+    print(df_out[['Class', 'Instance']])
+    # df_out[['Class', 'Instance']].to_csv('data/ontology/v7/ontology_entities.csv', index=False)
+
 
 def copy_DSD_files(path, name="za1", fractions=[0.25, 0.5, 0.75]):
     pooling = "none"
-    destination_path = "~/speer/data/datasets/{}/".format(name)
+    destination_path = "speer/data/datasets/{}/".format(name)
     Path(destination_path).mkdir(parents=True, exist_ok=True)
     for f in fractions:
         train = "T|{}|_M|{}|_F|{}|/train/combined_labeling/dataset.json".format(pooling, pooling, f)
@@ -200,12 +223,13 @@ def copy_DSD_files(path, name="za1", fractions=[0.25, 0.5, 0.75]):
 
 
 if __name__ == "__main__":
+    precalculate_ontology_representations()
     # test_overlap_evaluation()
     # evaluate_ontology_representations()
     # test_relation_matcher()
     # clean_ontology_v7()
     # copy_DSD_files("data/DistantlySupervisedDatasets/ontology_v7/29_07_2020_17_57_26", name="za1")
     # copy_DSD_files("data/DistantlySupervisedDatasets/ontology_v7/29_07_2020_18_02_46", name="za2")
-    copy_DSD_files("data/DistantlySupervisedDatasets/ontology_v7/30_07_2020_10_20_55", name="za3")
+    # copy_DSD_files("data/DistantlySupervisedDatasets/ontology_v7/30_07_2020_10_20_55", name="za3")
 
 

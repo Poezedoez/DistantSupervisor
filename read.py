@@ -60,18 +60,17 @@ class DataIterator:
 def read_ontology_entity_types(path, fraction=1.0, verbose=True):
     df = pd.read_csv(path)
     df["Class"] = df["Class"].str.lower()
-    new_df = pd.DataFrame(columns=df.columns)
     unique_classes = set(df["Class"].tolist())
+    ontology_entities = {}
     for c in unique_classes:
         filtered = df[df["Class"]==c]
         class_count = len(filtered)
         samples = math.ceil(fraction*class_count)
         if verbose:
             print("sampled {} out of {} for |{}|:".format(samples, class_count, c))
-        selection = filtered.sample(n=samples)
-        new_df = new_df.append(selection, ignore_index=True)
-    
-    ontology_entities = dict(zip(new_df["Instance"], df["Class"]))
+        selection = filtered.sample(n=samples)["Instance"].tolist()
+        for instance in selection:
+            ontology_entities[instance] = c
 
     return ontology_entities
 
