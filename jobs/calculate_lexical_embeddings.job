@@ -15,9 +15,9 @@ module load Anaconda3/2018.12
 
 source activate lisaenv
 
-cp -r $HOME/distantly-supervised-dataset/ $TMPDIR
-cd $TMPDIR/distantly-supervised-dataset
+cp -r $HOME/DSD/ $TMPDIR
+cd $TMPDIR/DSD
 
 python script.py
 
-cp -r data/ontology/ $HOME/distantly-supervised-dataset/data/
+cp -r data/ontology/ $HOME/DSD/data/
