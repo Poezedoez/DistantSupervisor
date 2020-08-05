@@ -85,7 +85,8 @@ class DistantSupervisor:
 
         # Ready ontology embeddings
         if label_strategy > 0:
-            self.ontology.calculate_entity_embeddings(iterator, self.embedder, self.token_pooling, self.mention_pooling)
+            self.ontology.calculate_entity_embeddings(iterator, self.embedder, self.token_pooling, 
+                                                      self.mention_pooling, self.entity_fraction)
                 
         # Supervise sentences        
         for sentence_subtokens, sentence_embeddings, doc_name in iterator.iter_sentences():

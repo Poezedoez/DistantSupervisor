@@ -146,4 +146,3 @@ python DistantSupervisor.py  \
 
 
 cp -r data/DistantlySupervisedDatasets/ $HOME/DSD/data/
-cp -r data/ontology/ $HOME/DSD/data/

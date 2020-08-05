@@ -6,11 +6,11 @@ import os
 def init(size):
     return faiss.IndexFlatIP(size)
 
-def save(index, table, token_pooling, mention_pooling, save_path="data/save/"):
+def save(index, table, token_pooling, mention_pooling, fraction, save_path="data/save/"):
     print("Saving Faiss index and table...")
     utils.create_dir(save_path)
-    index_name = "entities_T|{}|_M|{}|_index".format(token_pooling, mention_pooling)
-    table_name = "entities_T|{}|_M|{}|_table".format(token_pooling, mention_pooling)
+    index_name = "entities_T|{}|_M|{}|_F|{}|_index".format(token_pooling, mention_pooling, fraction)
+    table_name = "entities_T|{}|_M|{}|_F|{}|_table".format(token_pooling, mention_pooling, fraction)
     index_path = os.path.join(save_path, index_name)
     table_path = os.path.join(save_path, table_name)
     faiss.write_index(index, index_path)
@@ -20,9 +20,9 @@ def save(index, table, token_pooling, mention_pooling, save_path="data/save/"):
     print("Indexed {} entities with their labels".format(len(table)))
 
 
-def load(path, token_pooling, mention_pooling, device="cpu"):
-    index_name = "entities_T|{}|_M|{}|_index".format(token_pooling, mention_pooling)
-    table_name = "entities_T|{}|_M|{}|_table".format(token_pooling, mention_pooling)
+def load(path, token_pooling, mention_pooling, fraction, device="cpu"):
+    index_name = "entities_T|{}|_M|{}|_F|{}|_index".format(token_pooling, mention_pooling, fraction)
+    table_name = "entities_T|{}|_M|{}|_F|{}|_table".format(token_pooling, mention_pooling, fraction)
     index_path = os.path.join(path, index_name)
     table_path = os.path.join(path, table_name)
     if not os.path.exists(index_path) or not os.path.exists(table_path):

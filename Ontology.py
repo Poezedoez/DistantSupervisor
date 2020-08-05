@@ -65,7 +65,7 @@ class Ontology:
         self.types = self.convert_ontology_types()
         self.entity_fraction = entity_fraction
 
-    def calculate_entity_embeddings(self, data_iterator, embedder, token_pooling="none", mention_pooling="none"):
+    def calculate_entity_embeddings(self, data_iterator, embedder, token_pooling="none", mention_pooling="none", entity_fraction=1.0):
 
         def _accumulate_mean(embeddings, tokens, full_term, type_, ontology_embeddings):
             entry = {"type": type_, "string": tokens[0], "full_term": full_term}
@@ -101,13 +101,13 @@ class Ontology:
 
         # Check for existing index + table
         self.entity_index, self.entity_table = faiss_index.load(jp(self.parent_path, self.faiss_dir), 
-            token_pooling, mention_pooling, jp(self.parent_path, self.faiss_dir))
+            token_pooling, mention_pooling, entity_fraction)
         if self.entity_index and self.entity_table:
             print("Found existing entity index for T|{}| M|{}|, skipping calculations".format(token_pooling, mention_pooling))
             return self.entity_index, self.entity_table
         
-        print("Calculating ontology entity embeddings using |{}| token pooling and |{}| mention pooling...".format(
-            token_pooling, mention_pooling))
+        print("Calculating ontology entity embeddings using |{}| token pooling, |{}| mention pooling and |{}| fraction...".format(
+            token_pooling, mention_pooling, entity_fraction))
         self.entity_index = faiss_index.init(embedder.embedding_size)
         self.entity_table = []
         f_accumulation = {"mean":_accumulate_mean, "absmax":_accumulate_absmax, "max":_accumulate_max,
@@ -142,7 +142,7 @@ class Ontology:
 
         # Save
         faiss_index.save(self.entity_index, self.entity_table, token_pooling, 
-            mention_pooling, jp(self.parent_path, self.faiss_dir))
+            mention_pooling, entity_fraction, jp(self.parent_path, self.faiss_dir))
 
         return self.entity_index, self.entity_table
 
@@ -209,11 +209,6 @@ class Ontology:
         save_json(types, jp(self.parent_path, 'ontology_types.json'))
 
         return types
-
-
-if __name__ == "__main__":
-    parser = get_parser()
-    args = parser.parse_args()
 
 
 
