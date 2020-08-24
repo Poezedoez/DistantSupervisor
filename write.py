@@ -1,7 +1,6 @@
 import json
 import argparse
 from collections import Counter
-from evaluate import evaluate
 import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
@@ -161,41 +160,4 @@ def print_evaluation_scores(path):
         print("pooling method average: {:.2f}".format(pooling_average))
         print()
         pooling_results.append(pooling_average)
-
-def plot(cos_thetas, run_date="21_03_2020_11_51_28", set_="test", averaging="micro"):
-
-    precisions = []
-    recalls = []
-    f1s = []
-
-    for cos_theta in cos_thetas:
-        gt_path = "data/{}/{}/{}/string_labeling/dataset.json".format(run_date, set_, cos_theta)
-        pred_path =  "data/{}/{}/{}/embedding_labeling/dataset.json".format(run_date, set_, cos_theta)
-        micro_macro_averages = evaluate(gt_path, pred_path)
-        offset = 0 if averaging=="micro" else 3
-        precisions.append(micro_macro_averages[0+offset])
-        recalls.append(micro_macro_averages[1+offset])
-        f1s.append(micro_macro_averages[2+offset])
-
-    plt.title("Noun phrase embedding matches using different cosine similarity thresholds")
-    plt.xticks(np.linspace(0.72, 1, 15))
-    plt.plot(cos_thetas, precisions, label="precision")
-    plt.plot(cos_thetas, recalls, label="recall")
-    plt.plot(cos_thetas, f1s, label="f1")
-    plt.xlabel(r'$cos( \theta )$')
-    plt.ylabel("p/r/f1 ({})".format(averaging))
-
-    plt.legend()
-    plt.savefig("data/{}/plot_embedding_labeling_{}.png".format(run_date, averaging), dpi=720)
-
-if __name__ == "__main__":
-    # in_path = 'data/DistantlySupervisedDatasets/26_03_2020_09_04_56/train/embedding_labeling/dataset.json'
-    # ontology_path = "data/ontology_entities.csv"
-    # write_entities_without_duplicates(ontology_path, in_path)
-    # annotated_path = "data/annotation/annotated/50_annotated_combined_31_42_45.json"
-    # print_dataset(annotated_path, "data/annotation/annotated/annotated_dataset.txt")
-    # path = "data/ontology/evaluation/v4/evaluation_scores.json"
-    # print_evaluation_scores(path)
-    print_statistics("data/DistantlySupervisedDatasets/ontology_v4/01_07_2020_16_22_15/T|none|_M|none|/train/combined_labeling/statistics.json")
-
 
