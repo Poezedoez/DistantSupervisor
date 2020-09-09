@@ -1,4 +1,4 @@
-# distantly-supervised-dataset
+# DistantSupervisor
 
 Distant Supervisor is the main class that uses:
 
